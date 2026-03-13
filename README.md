@@ -1,4 +1,4 @@
-# Dad's Man's Morse
+# Dad's Morse
 
 An **offline-first** encrypted Morse communication tool. Encrypts messages with
 Argon2id + HKDF + AES-256-GCM, converts the ciphertext to Morse code, and lets
@@ -22,7 +22,7 @@ Installable as a PWA. Works fully offline after first load.
 
 ## Live Demo
 
-✅ https://systemslibrarian.github.io/dad-mode-morse/
+✅ https://systemslibrarian.github.io/dad-morse2/
 
 ---
 

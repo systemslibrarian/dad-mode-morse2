@@ -1,0 +1,2201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; media-src 'self' blob:; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src https://cdn.jsdelivr.net; base-uri 'none'; object-src 'none'; frame-ancestors 'none';" />
+  <title>Encrypted Morse Messenger – AES + Sound</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0a0a0a;
+      color: #00ff88;
+      padding: 22px;
+      max-width: 1000px;
+      margin: auto;
+      line-height: 1.6;
+    }
+
+    .container { background: #111; padding: 22px; border-radius: 12px; border: 1px solid #00ff88; }
+    label { display: block; margin: 15px 0 5px; font-weight: bold; }
+
+    input[type="text"], input[type="password"], textarea {
+      width: 100%;
+      padding: 12px;
+      background: #1a1a1a;
+      color: #00ff88;
+      border: 1px solid #00aa66;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    .password-row { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .checkbox-row { display: flex; align-items: center; gap: 10px; margin: 15px 0; }
+    .row { display:flex; gap:10px; flex-wrap: wrap; align-items: center; }
+
+    button {
+      padding: 12px 18px;
+      background: #00ff88;
+      color: black;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 10px 6px 10px 0;
+    }
+    button:hover { background: #33ffaa; }
+    button.paused { background: #ffaa00; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ===== Header hero (keep image here; bigger) ===== */
+    .hero {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 14px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(0,255,136,0.06), rgba(0,0,0,0));
+      border: 1px solid rgba(0,255,136,0.25);
+      margin-bottom: 14px;
+    }
+    .hero-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    #turtleHeaderImg{
+      width: 260px;          /* bigger header image */
+      max-width: 100%;
+      height: auto;
+      border-radius: 16px;
+      background: #000;
+      border: 1px solid rgba(0,255,136,0.25);
+      box-shadow: 0 0 18px rgba(0,255,136,0.12);
+      flex: 0 0 auto;
+      display: block;
+    }
+    .hero-text { min-width: 0; }
+    .hero-title {
+      font-size: 28px;
+      font-weight: 800;
+      margin: 0;
+      line-height: 1.2;
+    }
+    .hero-sub {
+      margin: 6px 0 0;
+      color: #88ffcc;
+      font-family: monospace;
+      opacity: 0.95;
+    }
+    .tx-badge {
+      font-family: monospace;
+      font-weight: bold;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid #00aa66;
+      color: #88ffcc;
+      background: #0b140b;
+      flex: 0 0 auto;
+      text-align: center;
+      min-width: 104px;
+    }
+    .tx-on .tx-badge {
+      color: #00ff88;
+      border-color: #00ff88;
+      background: #041a10;
+    }
+    @media (max-width: 640px) {
+      .hero { flex-direction: column; align-items: flex-start; }
+      #turtleHeaderImg { width: 100%; max-width: 380px; }
+      .tx-badge { align-self: stretch; }
+      .hero-title { font-size: 24px; }
+    }
+    /* ===== end hero ===== */
+
+    /* ===== Transmit row with MP4 next to Transmit ===== */
+    .tx-row{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap:16px;
+      flex-wrap:wrap;
+      margin: 12px 0;
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,255,136,0.18);
+      background: rgba(0,0,0,0.12);
+    }
+    .tx-row-left{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .tx-options {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+      margin-top: 2px;
+    }
+    .tx-option-btn {
+      padding: 8px 12px;
+      font-size: 13px;
+      margin: 0;
+      border-radius: 999px;
+      border: 1px solid #00aa66;
+      background: #102010;
+      color: #88ffcc;
+    }
+    .tx-option-btn.active {
+      background: #00aa66;
+      color: #001a10;
+    }
+    .tx-media-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .tx-video-controls {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      min-height: 34px;
+    }
+    .tx-video-controls .tx-option-btn {
+      display: none;
+    }
+    .tx-video-controls .tx-option-btn.show {
+      display: inline-block;
+    }
+    #turtleTxVid{
+      width: 240px;
+      max-width: 100%;
+      height: auto;
+      border-radius: 14px;
+      background:#000;
+      border: 1px solid rgba(0,255,136,0.35);
+      box-shadow: 0 0 14px rgba(0,255,136,0.08);
+    }
+    .tx-row.tx-on #turtleTxVid{
+      outline: 2px solid rgba(0,255,136,0.55);
+      box-shadow: 0 0 18px rgba(0,255,136,0.20);
+    }
+    /* ===== end tx row ===== */
+
+    #output {
+      background: #000;
+      padding: 18px;
+      border-radius: 8px;
+      border: 1px solid #004d33;
+      min-height: 220px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      margin-top: 14px;
+      overflow-y: auto;
+      max-height: 540px;
+    }
+
+    #morseOutput { margin: 15px 0; font-size: 18px; word-break: break-word; color: #ccffdd; }
+    .copy-btn { font-size: 14px; padding: 8px 14px; }
+    .status { color: #88ffcc; font-weight: bold; }
+    .error { color: #ff6666; font-weight: bold; }
+
+    .instructions { background: #1a2a1a; padding: 12px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #00ff88; }
+    .decrypt-section {
+      margin-top: 46px;
+      padding: 22px 18px;
+      background: #0d1a0d;
+      border-radius: 10px;
+      border: 1px solid #006633;
+    }
+    .mini { font-size: 0.95em; color:#88ffcc; }
+    .hr { height: 1px; background:#0a3; opacity: 0.4; margin: 14px 0; }
+
+    .audio-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .file-chip {
+      border: 1px solid rgba(0,255,136,0.35);
+      background: rgba(0,0,0,0.25);
+      color: #88ffcc;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    /* ===== Help tooltip ===== */
+    .help-tip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid #00aa66;
+      color: #00aa66;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: default;
+      position: relative;
+      margin-left: 5px;
+      vertical-align: middle;
+      user-select: none;
+      font-family: Arial, sans-serif;
+      line-height: 1;
+    }
+    .help-tip:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #1a2a1a;
+      border: 1px solid #00aa66;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #88ffcc;
+      white-space: normal;
+      width: 270px;
+      z-index: 999;
+      pointer-events: none;
+      font-family: monospace;
+      line-height: 1.5;
+    }
+    @media (max-width: 640px) {
+      .help-tip:hover::after { left: auto; right: 0; top: 22px; transform: none; }
+    }
+
+    /* ===== Signal strength slider ===== */
+    .signal-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 8px 0 4px;
+      font-size: 14px;
+      color: #88ffcc;
+      padding: 0 2px;
+    }
+    .signal-row label { margin: 0; font-weight: bold; font-size: 14px; color: #88ffcc; }
+    #signalSlider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(to right, #ff4444, #ffaa00, #00ff88);
+      outline: none;
+      cursor: pointer;
+      width: 130px;
+      flex: 0 0 auto;
+    }
+    #signalSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #00ff88;
+      border: 2px solid #004422;
+      cursor: pointer;
+    }
+    #signalSlider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #00ff88;
+      border: 2px solid #004422;
+      cursor: pointer;
+    }
+    #signalValueLabel {
+      font-family: monospace;
+      font-size: 13px;
+      color: #ccffdd;
+      min-width: 210px;
+    }
+
+    /* ===== Decode progress bar ===== */
+    #decodeProgress {
+      display: none;
+      margin: 12px 0 4px;
+      background: #0c180c;
+      border: 1px solid rgba(0,255,136,0.22);
+      border-radius: 8px;
+      padding: 10px 14px 12px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    #decodeProgressLabel {
+      color: #88ffcc;
+      display: block;
+      margin-bottom: 6px;
+    }
+    #decodeProgressTrack {
+      background: #0a2a0a;
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(0,255,136,0.15);
+    }
+    #decodeProgressBar {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(to right, #00aa66, #00ff88);
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+    /* ===== end decode progress ===== */
+
+    /* ===== Toast notification ===== */
+    #toastMsg {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: #1a2a1a;
+      border: 1px solid #00aa66;
+      color: #88ffcc;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+      z-index: 9999;
+      box-shadow: 0 4px 18px rgba(0,255,136,0.15);
+      max-width: 320px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+    }
+    #toastMsg.show { opacity: 1; transform: translateY(0); }
+
+    /* Private key textarea masking */
+    #ed25519PrivateKey {
+      -webkit-text-security: disc;
+      text-security: disc;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header image stays here -->
+  <div class="hero" id="heroVisual">
+    <div class="hero-left">
+      <!-- Put turtle.png next to index.html -->
+      <img id="turtleHeaderImg" src="./turtle.png" alt="Turtle transmitting Morse code" />
+      <div class="hero-text">
+        <div class="hero-title">Encrypted Morse Messenger</div>
+        <div class="hero-sub">Encrypt → Morse → Beep audio (pause/resume/stop) → Decrypt</div>
+      </div>
+    </div>
+    <div id="txBadge" class="tx-badge" aria-live="polite">IDLE</div>
+  </div>
+
+  <div class="instructions">
+    <strong>How to use:</strong><br>
+    1. Enter message + password.<br>
+    2. Click <strong>Transmit</strong> &rarr; Morse generated (turtle video plays).<br>
+    3. Copy Morse, play audio, or download the audio WAV.<br>
+    4. Share the WAV or the Morse string with the recipient.<br>
+    5. Recipient uploads the WAV and clicks <strong>Decode WAV &rarr; Morse</strong>, or pastes the Morse string directly, then enters the same password and clicks <strong>Decrypt</strong>.<br><br>
+    <em>Security:</em> AES-256-GCM + authenticated metadata (AAD) + HKDF key separation. Password KDF: <strong>Argon2id</strong> (memory-hard, calibrated per device). Optional Signal Key.
+  </div>
+
+  <label for="message">Message:</label>
+  <textarea id="message" rows="3" placeholder="Your secret message..."></textarea>
+
+  <label for="password">Password (min 14 characters):</label>
+  <div class="password-row">
+    <input type="password" id="password" placeholder="Minimum 14 characters required" />
+    <label class="checkbox-row" style="margin:0;">
+      <input type="checkbox" id="showPw" />
+      Show
+    </label>
+  </div>
+
+  
+  <label for="pepper">Signal Key (optional): <span class="help-tip" data-tip="Optional extra secret phrase (like a call sign). If used, the recipient MUST know it too. Not stored in the WAV.">?</span></label>
+  <div class="password-row">
+    <input type="password" id="pepper" placeholder="Optional Signal Key / Call Sign (share out-of-band)" />
+    <label class="checkbox-row" style="margin:0;">
+      <input type="checkbox" id="showPep" />
+      Show
+    </label>
+  </div>
+
+  <div class="hr"></div>
+
+  <!-- Ed25519 Signing Section -->
+  <div class="checkbox-row">
+    <input type="checkbox" id="enableSigning" />
+    <label for="enableSigning" style="margin:0;font-weight:bold;">Enable Ed25519 Signing (adds sender authenticity) <span class="help-tip" data-tip="When enabled, the plaintext message is signed with your Ed25519 private key. The recipient can verify with your public key that you (and only you) sent this message. Signature is NOT encrypted—it's appended to output.">?</span></label>
+  </div>
+
+  <div id="signingSection" style="display:none; padding: 12px; background: #0d1a0d; border-radius: 8px; border: 1px solid #006633; margin: 10px 0;">
+    <div class="row" style="margin-bottom: 10px;">
+      <button type="button" id="generateEd25519Btn">Generate Ed25519 Key Pair</button>
+    </div>
+    <label for="ed25519PrivateKey">Your Ed25519 Private Key (base64 PKCS8): <span class="help-tip" data-tip="Paste your Ed25519 private key in base64 (PKCS8 format). Keep this SECRET—do not share! Used to sign messages.">?</span></label>
+    <div class="password-row">
+      <textarea id="ed25519PrivateKey" rows="2" placeholder="Paste your Ed25519 private key (base64 PKCS8) here..." style="font-size:13px;"></textarea>
+      <label class="checkbox-row" style="margin:0;">
+        <input type="checkbox" id="showPrivKey" />
+        Show
+      </label>
+    </div>
+  </div>
+
+<!-- Transmit + video side-by-side -->
+  <div class="tx-row" id="txRow">
+    <div class="tx-row-left">
+      <button id="txBtn">Transmit</button>
+      <button id="clearBtn">Clear</button>
+      <div class="tx-options">
+        <button type="button" id="txMuteBtn" class="tx-option-btn">Mute: Off</button>
+      </div>
+    </div>
+
+    <div class="tx-media-stack">
+      <!-- Put turtle.mp4 next to index.html -->
+      <video id="turtleTxVid" preload="auto" playsinline poster="./turtle.png">
+        <source src="./turtle.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+      <div class="tx-video-controls">
+        <button type="button" id="txReplayBtn" class="tx-option-btn">Replay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signal strength slider -->
+  <div class="signal-row">
+    <label for="signalSlider">&#x1F4E1; Signal:</label>
+    <input type="range" id="signalSlider" min="0" max="100" value="100" />
+    <span id="signalValueLabel">100% &mdash; Crystal clear</span>
+  </div>
+
+  <div id="output"></div>
+
+  <div class="decrypt-section">
+    <div class="mini" style="margin-bottom:10px;">
+      Upload a Morse WAV to play it back or click <strong>Decode WAV &rarr; Morse</strong> to extract the Morse code automatically.
+    </div>
+    <div class="audio-row">
+      <input id="audioUpload" type="file" accept="audio/wav,audio/*" />
+      <span id="audioUploadName" class="file-chip">No audio loaded</span>
+      <button id="playUploadedBtn" disabled>Play Uploaded Audio</button>
+      <button id="stopUploadedBtn" disabled>Stop Uploaded Audio</button>
+      <button id="decodeWavBtn" disabled>Decode WAV → Morse</button>
+    </div>
+    <audio id="uploadedAudio" controls style="width:100%; margin-top:10px; display:none;"></audio>
+
+    <div id="decodeProgress">
+      <span id="decodeProgressLabel">Idle</span>
+      <div id="decodeProgressTrack"><div id="decodeProgressBar"></div></div>
+    </div>
+
+    <h3>Decrypt a received message</h3>
+    <p class="mini">Enter the same password used to encrypt the message.</p>
+
+    <label for="decryptPassword">Password for decryption:</label>
+    <div class="password-row">
+      <input type="password" id="decryptPassword" placeholder="Re-enter the same password here" />
+      <label class="checkbox-row" style="margin:0;">
+        <input type="checkbox" id="showDecPw" />
+        Show
+      </label>
+    </div>
+
+    
+    <label for="decryptPepper">Signal Key (optional): <span class="help-tip" data-tip="If the sender used a Signal Key, you must enter the same one here.">?</span></label>
+    <div class="password-row">
+      <input type="password" id="decryptPepper" placeholder="Optional Signal Key / Call Sign (must match sender)" />
+      <label class="checkbox-row" style="margin:0;">
+        <input type="checkbox" id="showDecPep" />
+        Show
+      </label>
+    </div>
+
+    <div class="hr"></div>
+
+    <!-- Ed25519 Verification Section -->
+    <label for="ed25519PublicKey">Sender's Ed25519 Public Key (base64 SPKI, optional): <span class="help-tip" data-tip="If the sender signed their message, paste their PUBLIC key here (base64 SPKI) to verify authenticity. If signature is present but no key is provided, you'll see a warning.">?</span></label>
+    <textarea id="ed25519PublicKey" rows="2" placeholder="Paste sender's Ed25519 public key (base64 SPKI) here for signature verification..." style="font-size:13px;"></textarea>
+
+<label for="morseInput">Paste received Morse code here:</label>
+    <textarea id="morseInput" rows="5" placeholder="Paste the full Morse string here..."></textarea>
+
+    <div class="row" style="margin-top: 10px;">
+      <button id="decBtn">Decrypt</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/** =========================
+ *  MORSE <-> HEX
+ *  ========================= */
+const hexMorseDict = {
+  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....',
+  '6':'-....','7':'--...','8':'---..','9':'----.','A':'.-','B':'-...',
+  'C':'-.-.','D':'-..','E':'.','F':'..-.'
+};
+const reverseHexMorse = Object.fromEntries(Object.entries(hexMorseDict).map(([k,v])=>[v,k]));
+
+function toMorseHex(hex) {
+  return hex.toUpperCase().split('')
+    .map(c => hexMorseDict[c] || '')
+    .filter(Boolean)
+    .join(' ');
+}
+
+function morseToHex(morse) {
+  const groups = morse.trim().split(/\s+/).filter(Boolean);
+  let hex = '';
+  let invalid = false;
+  for (const g of groups) {
+    const ch = reverseHexMorse[g];
+    if (!ch) { invalid = true; hex += '?'; }
+    else hex += ch;
+  }
+  return { hex: hex.toLowerCase(), invalid };
+}
+
+/** =========================
+ *  DMM1 CONTAINER (v2) + Argon2id KDF + HKDF + AES-GCM (AAD)
+ *  - KDF: Argon2id (memory-hard, calibrated ~300-500ms)
+ *  - Optional Signal Key ("pepper"): entered by user, NOT stored/transmitted
+ *  - Key separation: HKDF(master)->K_enc (+ reserve K_meta)
+ *  - AAD binds header + salt + iv to the ciphertext (tamper = decrypt fail)
+ *  ========================= */
+
+// DMM1 header layout (little endian) - Argon2id version:
+// 0..3   "DMM1"
+// 4      version = 0x02 (Argon2id)
+// 5      kdf_id  = 0x02 (Argon2id)
+// 6      flags   bit0 = pepper_used
+// 7      timeCost (uint8)
+// 8..9   memoryCostKiB (uint16 LE)
+// 10     parallelism (uint8)
+// 11     reserved
+// 12..27 salt (16)
+// 28..39 iv   (12)
+// 40..   ciphertext+tag
+const DMM1_MAGIC = [0x44,0x4d,0x4d,0x31]; // "DMM1"
+const DMM1_VERSION = 0x02;
+const KDF_ARGON2ID = 0x02;
+const FLAG_PEPPER = 0x01;
+
+// Argon2id default params (target ~300-500ms)
+const ARGON2_TARGET_MS = 400;
+const ARGON2_DEFAULT_TIME_COST = 4;
+const ARGON2_DEFAULT_MEMORY_KIB = 65535; // ~64 MiB (max uint16)
+const ARGON2_DEFAULT_PARALLELISM = 4;
+const ARGON2_MIN_TIME_COST = 2;
+const ARGON2_MAX_TIME_COST = 16;
+const ARGON2_MIN_MEMORY_KIB = 16384;  // 16 MiB minimum
+const ARGON2_MAX_MEMORY_KIB = 65535; // uint16 max (header field is 2 bytes)
+
+// Argon2id WASM state
+let argon2Ready = false;
+let argon2Module = null;
+let argon2CalibratedParams = null;
+
+function u16le(n) {
+  const b = new Uint8Array(2);
+  const dv = new DataView(b.buffer);
+  dv.setUint16(0, n & 0xFFFF, true);
+  return b;
+}
+function readU16le(bytes, off) {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint16(off, true);
+}
+
+function concatPwPepper(password, pepper) {
+  // Length-prefixed domain separation prevents collisions when password
+  // or pepper contain the separator character.
+  const p = password || "";
+  const x = pepper || "";
+  if (!x) return p;
+  // Format: <pw_len_hex>:pw\x00<pep_len_hex>:pep — unambiguous parse
+  return p.length.toString(16) + ":" + p + "\u0000" + x.length.toString(16) + ":" + x;
+}
+
+function hexFromBytes(bytes){
+  return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function bytesFromHex(hex){
+  if (!/^[0-9a-f]+$/i.test(hex) || hex.length % 2 !== 0) throw new Error("Invalid hex payload");
+  return new Uint8Array(hex.match(/.{1,2}/g).map(b=>parseInt(b,16)));
+}
+
+// Load Argon2id WASM from CDN
+async function loadArgon2() {
+  if (argon2Ready && argon2Module) return argon2Module;
+  
+  try {
+    // Use argon2-browser from jsdelivr CDN
+    const cdnUrl = 'https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js';
+    // SRI hash to prevent supply-chain tampering
+    const sriHash = 'sha384-XOR3aNvHciLPIf6r+2glkrmbBbLmIJ1EChMXjw8eBKBf8gE0rDq1TyUNuRdorOqi';
+    
+    // Dynamically load the script
+    await new Promise((resolve, reject) => {
+      const existingScript = document.querySelector(`script[src="${cdnUrl}"]`);
+      if (existingScript) {
+        if (window.argon2) {
+          resolve();
+          return;
+        }
+        existingScript.addEventListener('load', resolve);
+        existingScript.addEventListener('error', reject);
+        return;
+      }
+      
+      const script = document.createElement('script');
+      script.src = cdnUrl;
+      script.integrity = sriHash;
+      script.crossOrigin = 'anonymous';
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Failed to load Argon2 library from CDN (integrity check may have failed)'));
+      document.head.appendChild(script);
+    });
+    
+    if (!window.argon2) {
+      throw new Error('Argon2 library not available after loading');
+    }
+    
+    argon2Module = window.argon2;
+    argon2Ready = true;
+    return argon2Module;
+  } catch (e) {
+    throw new Error(`Argon2id initialization failed: ${e.message}`);
+  }
+}
+
+// Derive master key using Argon2id
+async function deriveMasterArgon2id(pwPep, salt, timeCost, memoryCostKiB, parallelism) {
+  const argon2 = await loadArgon2();
+  
+  const enc = new TextEncoder();
+  const passwordBytes = enc.encode(pwPep);
+  
+  const result = await argon2.hash({
+    pass: passwordBytes,
+    salt: salt,
+    time: timeCost,
+    mem: memoryCostKiB,
+    parallelism: parallelism,
+    hashLen: 32,
+    type: argon2.ArgonType.Argon2id
+  });
+  
+  return new Uint8Array(result.hash);
+}
+
+async function hkdfSplit(masterBytes, salt, infoStr, out){
+  const baseKey = await crypto.subtle.importKey("raw", masterBytes, "HKDF", false, ["deriveBits","deriveKey"]);
+  const info = new TextEncoder().encode(infoStr);
+  if (out === "aes") {
+    return crypto.subtle.deriveKey(
+      { name:"HKDF", hash:"SHA-256", salt, info },
+      baseKey,
+      { name:"AES-GCM", length:256 },
+      false,
+      ["encrypt","decrypt"]
+    );
+  } else {
+    const bits = await crypto.subtle.deriveBits(
+      { name:"HKDF", hash:"SHA-256", salt, info },
+      baseKey,
+      256
+    );
+    return new Uint8Array(bits);
+  }
+}
+
+// Calibrate Argon2id parameters to target ~300-500ms
+async function calibrateArgon2id(targetMs = ARGON2_TARGET_MS) {
+  // Check cache
+  if (argon2CalibratedParams) return argon2CalibratedParams;
+  
+  try {
+    const cached = localStorage.getItem("dmm_argon2_params_v1");
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      // Validate cached params are numbers within allowed bounds
+      if (typeof parsed.timeCost === 'number'
+          && typeof parsed.memoryCostKiB === 'number'
+          && typeof parsed.parallelism === 'number'
+          && Number.isInteger(parsed.timeCost)
+          && Number.isInteger(parsed.memoryCostKiB)
+          && Number.isInteger(parsed.parallelism)
+          && parsed.timeCost >= ARGON2_MIN_TIME_COST && parsed.timeCost <= ARGON2_MAX_TIME_COST
+          && parsed.memoryCostKiB >= ARGON2_MIN_MEMORY_KIB && parsed.memoryCostKiB <= ARGON2_MAX_MEMORY_KIB
+          && parsed.parallelism >= 1 && parsed.parallelism <= 16) {
+        argon2CalibratedParams = parsed;
+        return parsed;
+      } else {
+        // Cached params invalid/out of range — recalibrate
+        localStorage.removeItem("dmm_argon2_params_v1");
+      }
+    }
+  } catch (_) {}
+
+  await loadArgon2();
+  
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const pw = "calibrate\u0000dmm";
+  
+  // Start with default params and adjust timeCost
+  let timeCost = ARGON2_DEFAULT_TIME_COST;
+  let memoryCostKiB = ARGON2_DEFAULT_MEMORY_KIB;
+  let parallelism = ARGON2_DEFAULT_PARALLELISM;
+  
+  // Run benchmark with baseline timeCost=2
+  const baselineTime = 2;
+  const t0 = performance.now();
+  await deriveMasterArgon2id(pw, salt, baselineTime, memoryCostKiB, parallelism);
+  const t1 = performance.now();
+  const dt = Math.max(1, t1 - t0);
+  
+  // Scale timeCost to reach target
+  timeCost = Math.round(baselineTime * (targetMs / dt));
+  timeCost = Math.max(ARGON2_MIN_TIME_COST, Math.min(ARGON2_MAX_TIME_COST, timeCost));
+  
+  // If still too slow with min timeCost, reduce memory
+  if (dt > targetMs * 2 && memoryCostKiB > ARGON2_MIN_MEMORY_KIB) {
+    memoryCostKiB = Math.max(ARGON2_MIN_MEMORY_KIB, Math.round(memoryCostKiB * (targetMs / dt)));
+    timeCost = ARGON2_DEFAULT_TIME_COST;
+  }
+  
+  const params = { timeCost, memoryCostKiB, parallelism };
+  argon2CalibratedParams = params;
+  
+  try { 
+    localStorage.setItem("dmm_argon2_params_v1", JSON.stringify(params)); 
+  } catch (_) {}
+  
+  return params;
+}
+
+function buildDmm1Header({kdfId, flags, timeCost, memoryCostKiB, parallelism, salt, iv}) {
+  const header = new Uint8Array(40);
+  header.set(DMM1_MAGIC, 0);
+  header[4] = DMM1_VERSION;
+  header[5] = kdfId;
+  header[6] = flags;
+  header[7] = timeCost;
+  header.set(u16le(memoryCostKiB), 8);
+  header[10] = parallelism;
+  header[11] = 0x00; // reserved
+  header.set(salt, 12);
+  header.set(iv, 28);
+  return header;
+}
+
+function isDmm1(bytes){
+  if (!bytes || bytes.length < 40) return false;
+  for (let i=0;i<4;i++) if (bytes[i] !== DMM1_MAGIC[i]) return false;
+  return true;
+}
+
+async function dmmEncryptV2(plaintext, password, pepper) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  
+  // Calibrate and get Argon2id params
+  const params = await calibrateArgon2id(ARGON2_TARGET_MS);
+  const { timeCost, memoryCostKiB, parallelism } = params;
+
+  const pwPep = concatPwPepper(password, pepper);
+  const master = await deriveMasterArgon2id(pwPep, salt, timeCost, memoryCostKiB, parallelism);
+
+  const kEnc = await hkdfSplit(master, salt, "dad-mode-morse:v2:enc", "aes");
+
+  const flags = pepper ? FLAG_PEPPER : 0x00;
+  const header = buildDmm1Header({kdfId: KDF_ARGON2ID, flags, timeCost, memoryCostKiB, parallelism, salt, iv});
+  const additionalData = header;
+
+  const enc = new TextEncoder();
+  const ctBuf = await crypto.subtle.encrypt(
+    { name:"AES-GCM", iv, additionalData, tagLength:128 },
+    kEnc,
+    enc.encode(plaintext)
+  );
+
+  const ct = new Uint8Array(ctBuf);
+  const combined = new Uint8Array(header.length + ct.length);
+  combined.set(header, 0);
+  combined.set(ct, header.length);
+
+  return { hex: hexFromBytes(combined), meta: { timeCost, memoryCostKiB, parallelism, pepperUsed: !!pepper } };
+}
+
+async function dmmDecryptAny(hex, password, pepper) {
+  const bytes = bytesFromHex(hex);
+
+  if (isDmm1(bytes)) {
+    const ver = bytes[4];
+    if (ver !== DMM1_VERSION) throw new Error("Unsupported DMM version (expected v2/Argon2id)");
+    const kdfId = bytes[5];
+    const flags = bytes[6];
+    const timeCost = bytes[7];
+    const memoryCostKiB = readU16le(bytes, 8);
+    const parallelism = bytes[10];
+    const salt  = bytes.slice(12, 28);
+    const iv    = bytes.slice(28, 40);
+    const data  = bytes.slice(40);
+    const pepperUsed = (flags & FLAG_PEPPER) !== 0;
+
+    if (kdfId !== KDF_ARGON2ID) {
+      throw new Error("Unsupported KDF. This version only supports Argon2id (kdf_id=0x02).");
+    }
+    if (timeCost < ARGON2_MIN_TIME_COST || timeCost > ARGON2_MAX_TIME_COST) {
+      throw new Error("Invalid Argon2id timeCost parameter");
+    }
+    if (memoryCostKiB < ARGON2_MIN_MEMORY_KIB || memoryCostKiB > ARGON2_MAX_MEMORY_KIB) {
+      throw new Error("Invalid Argon2id memoryCost parameter");
+    }
+    if (parallelism < 1 || parallelism > 16) {
+      throw new Error("Invalid Argon2id parallelism parameter");
+    }
+    if (pepperUsed && !pepper) {
+      throw new Error("Signal Key required (sender used a Signal Key).");
+    }
+
+    const pwPep = concatPwPepper(password, pepperUsed ? pepper : "");
+    const master = await deriveMasterArgon2id(pwPep, salt, timeCost, memoryCostKiB, parallelism);
+    const kEnc = await hkdfSplit(master, salt, "dad-mode-morse:v2:enc", "aes");
+
+    const header = bytes.slice(0, 40);
+    const additionalData = header;
+
+    const ptBuf = await crypto.subtle.decrypt(
+      { name:"AES-GCM", iv, additionalData, tagLength:128 },
+      kEnc,
+      data
+    );
+    return new TextDecoder().decode(ptBuf);
+  }
+
+  // No legacy fallback - Argon2id only
+  throw new Error("Invalid payload format. Expected DMM1 v2 (Argon2id) container.");
+}
+
+// Public helpers used by the UI
+async function aesGcmEncrypt(plaintext, password, pepper) {
+  return dmmEncryptV2(plaintext, password, pepper);
+}
+async function aesGcmDecrypt(hex, password, pepper) {
+  return dmmDecryptAny(hex, password, pepper);
+}
+
+/** =========================
+ *  ED25519 SIGNING/VERIFICATION (Web Crypto)
+ *  ========================= */
+const ED25519_SIG_LINE_PREFIX = "Ed25519 Signature (base64): ";
+
+function base64ToBytes(b64) {
+  if (!b64 || typeof b64 !== 'string') throw new Error('Invalid base64 input');
+  // Validate base64 format
+  const b64Clean = b64.replace(/\s/g, '');
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(b64Clean)) throw new Error('Invalid base64 characters');
+  try {
+    const binStr = atob(b64Clean);
+    const bytes = new Uint8Array(binStr.length);
+    for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+    return bytes;
+  } catch (e) {
+    throw new Error('Invalid base64 encoding: ' + (e?.message || String(e)));
+  }
+}
+
+function bytesToBase64(bytes) {
+  let binStr = '';
+  for (const b of bytes) binStr += String.fromCharCode(b);
+  return btoa(binStr);
+}
+
+let _ed25519SupportCache = null;
+async function checkEd25519Support() {
+  if (_ed25519SupportCache !== null) return _ed25519SupportCache;
+  try {
+    const testKey = await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
+    _ed25519SupportCache = !!testKey;
+    return _ed25519SupportCache;
+  } catch (e) {
+    _ed25519SupportCache = false;
+    return false;
+  }
+}
+
+async function generateEd25519KeyPair() {
+  const isSupported = await checkEd25519Support();
+  if (!isSupported) {
+    throw new Error("Ed25519 is not supported in this browser. Try Chrome 113+, Edge 113+, or Safari 17+.");
+  }
+
+  const keyPair = await crypto.subtle.generateKey(
+    "Ed25519",
+    true, // extractable
+    ["sign", "verify"]
+  );
+
+  // Export private key as PKCS8
+  const privateKeyExported = await crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+  const privateKeyBase64 = bytesToBase64(new Uint8Array(privateKeyExported));
+
+  // Export public key as SPKI
+  const publicKeyExported = await crypto.subtle.exportKey("spki", keyPair.publicKey);
+  const publicKeyBase64 = bytesToBase64(new Uint8Array(publicKeyExported));
+
+  return { privateKeyBase64, publicKeyBase64 };
+}
+
+async function importEd25519PrivateKey(base64Pkcs8) {
+  if (!base64Pkcs8 || typeof base64Pkcs8 !== 'string') {
+    throw new Error('Private key is required');
+  }
+  const keyData = base64ToBytes(base64Pkcs8);
+  try {
+    return await crypto.subtle.importKey(
+      "pkcs8",
+      keyData,
+      "Ed25519",
+      false,
+      ["sign"]
+    );
+  } catch (e) {
+    throw new Error('Invalid Ed25519 private key format: ' + (e?.message || String(e)));
+  }
+}
+
+async function importEd25519PublicKey(base64Spki) {
+  if (!base64Spki || typeof base64Spki !== 'string') {
+    throw new Error('Public key is required');
+  }
+  const keyData = base64ToBytes(base64Spki);
+  try {
+    return await crypto.subtle.importKey(
+      "spki",
+      keyData,
+      "Ed25519",
+      false,
+      ["verify"]
+    );
+  } catch (e) {
+    throw new Error('Invalid Ed25519 public key format: ' + (e?.message || String(e)));
+  }
+}
+
+async function signMessageEd25519(message, privateKeyBase64) {
+  const privateKey = await importEd25519PrivateKey(privateKeyBase64);
+  const enc = new TextEncoder();
+  const signature = await crypto.subtle.sign(
+    "Ed25519",
+    privateKey,
+    enc.encode(message)
+  );
+  const sigBytes = new Uint8Array(signature);
+  // Ed25519 signatures must be exactly 64 bytes
+  if (sigBytes.length !== 64) {
+    throw new Error(`Unexpected Ed25519 signature length: ${sigBytes.length} (expected 64)`);
+  }
+  return bytesToBase64(sigBytes);
+}
+
+async function verifySignatureEd25519(message, signatureBase64, publicKeyBase64) {
+  const publicKey = await importEd25519PublicKey(publicKeyBase64);
+  const enc = new TextEncoder();
+  const sigBytes = base64ToBytes(signatureBase64);
+  // Ed25519 signatures are always exactly 64 bytes
+  if (sigBytes.length !== 64) {
+    throw new Error(`Invalid Ed25519 signature length: expected 64 bytes, got ${sigBytes.length}`);
+  }
+  return crypto.subtle.verify(
+    "Ed25519",
+    publicKey,
+    sigBytes,
+    enc.encode(message)
+  );
+}
+
+function extractSignatureFromInput(inputText) {
+  // Look for signature line at end of input
+  const lines = inputText.trim().split('\n');
+  let signatureBase64 = null;
+  let morseOnly = inputText;
+
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (line.startsWith(ED25519_SIG_LINE_PREFIX)) {
+      signatureBase64 = line.slice(ED25519_SIG_LINE_PREFIX.length).trim();
+      // Remove signature line from morse
+      morseOnly = lines.slice(0, i).join('\n').trim();
+      break;
+    }
+  }
+
+  return { morseOnly, signatureBase64 };
+}
+
+/** =========================
+ *  Badge + row highlight
+ *  ========================= */
+function setTxVisual(on, label) {
+  const badge = document.getElementById("txBadge");
+  const txRow = document.getElementById("txRow");
+  if (txRow) {
+    if (on) txRow.classList.add("tx-on");
+    else txRow.classList.remove("tx-on");
+  }
+  if (badge) badge.textContent = label || (on ? "TRANSMIT" : "IDLE");
+}
+
+/** =========================
+ *  TURTLE TX VIDEO (next to Transmit) - reliable play
+ *  ========================= */
+const turtleTxVid = document.getElementById("turtleTxVid");
+let txVideoMuted = false;
+let turtleTxStopTimer = null;
+let turtleTxStartedAt = 0;
+const TURTLE_TX_MIN_MS = 2500; // keep animation visible at least this long
+
+function waitForCanPlay(video, timeoutMs = 5000) {
+  return new Promise((resolve, reject) => {
+    if (!video) return reject(new Error("No video element"));
+
+    // HAVE_FUTURE_DATA or better
+    if (video.readyState >= 3) return resolve();
+
+    const onCanPlay = () => { cleanup(); resolve(); };
+    const onError = () => { cleanup(); reject(new Error("Video error loading")); };
+
+    const t = setTimeout(() => {
+      cleanup();
+      reject(new Error("Timed out waiting for video to be ready"));
+    }, timeoutMs);
+
+    function cleanup() {
+      clearTimeout(t);
+      video.removeEventListener("canplay", onCanPlay);
+      video.removeEventListener("error", onError);
+    }
+
+    video.addEventListener("canplay", onCanPlay, { once: true });
+    video.addEventListener("error", onError, { once: true });
+  });
+}
+
+async function playTurtleDuringTx() {
+  if (!turtleTxVid) return;
+  setTxReplayVisible(false);
+
+  // Honor user mute preference for transmit clip audio.
+  turtleTxVid.muted = txMutedEnabled();
+  turtleTxVid.volume = 1;
+  turtleTxVid.playsInline = true;
+
+  // Play exactly one cycle per transmit click.
+  turtleTxVid.loop = false;
+
+  // Slow it down slightly so it's easier to notice.
+  turtleTxVid.playbackRate = 0.75;
+
+  turtleTxStartedAt = performance.now();
+
+  try { turtleTxVid.currentTime = 0; } catch (_) {}
+
+  // Attempt 1: play directly (user gesture from clicking Transmit should allow).
+  try {
+    const p = turtleTxVid.play();
+    if (p && typeof p.then === "function") await p;
+    return;
+  } catch (err) {
+    // If audio autoplay is blocked, try once more after ensuring media is loaded.
+    if (!(err && err.name === "NotAllowedError")) {
+      /* fall through */
+    }
+  }
+
+  // Attempt 2: load + wait
+  try {
+    turtleTxVid.load();
+    await waitForCanPlay(turtleTxVid, 6000);
+    turtleTxVid.muted = txMutedEnabled();
+    const p = turtleTxVid.play();
+    if (p && typeof p.then === "function") await p;
+  } catch (e) {
+    console.warn("Turtle TX video unavailable:", e.message);
+  }
+}
+
+function txMutedEnabled() {
+  return !!txVideoMuted;
+}
+
+function setTxMuteState(muted) {
+  txVideoMuted = !!muted;
+  if (turtleTxVid) turtleTxVid.muted = txVideoMuted;
+  const muteBtn = document.getElementById("txMuteBtn");
+  if (muteBtn) {
+    muteBtn.textContent = txVideoMuted ? "Mute: On" : "Mute: Off";
+    muteBtn.classList.toggle("active", txVideoMuted);
+  }
+}
+
+function setTxReplayVisible(show) {
+  const replayBtn = document.getElementById("txReplayBtn");
+  if (!replayBtn) return;
+  replayBtn.classList.toggle("show", !!show);
+}
+
+function primeTurtleTxVideo() {
+  if (!turtleTxVid) return;
+  try {
+    // Preload media data early so user-gesture playback can start with sound.
+    turtleTxVid.preload = "auto";
+    turtleTxVid.load();
+  } catch (_) {}
+}
+
+function stopTurtleTx(force = false) {
+  try {
+    if (turtleTxStopTimer) {
+      clearTimeout(turtleTxStopTimer);
+      turtleTxStopTimer = null;
+    }
+    if (!turtleTxVid) return;
+
+    if (force) {
+      // Immediate stop (e.g. Clear button)
+      turtleTxVid.loop = false;
+      turtleTxVid.playbackRate = 1.0;
+      turtleTxVid.pause();
+      try { turtleTxVid.currentTime = 0; } catch (_) {}
+      setTxReplayVisible(false);
+      setTxVisual(false, "READY");
+      return;
+    }
+
+    // Let the video finish its current playthrough to the end
+    turtleTxVid.loop = false;           // stop looping so it will fire 'ended'
+    turtleTxVid.playbackRate = 1.0;     // restore normal speed for the finish
+
+    const onEnded = () => {
+      turtleTxVid.removeEventListener("ended", onEnded);
+      try { turtleTxVid.currentTime = 0; } catch (_) {}
+      setTxReplayVisible(true);
+      setTxVisual(false, "READY");
+    };
+    turtleTxVid.addEventListener("ended", onEnded, { once: true });
+
+    // Safety: if already past the end or paused, clean up after a timeout
+    turtleTxStopTimer = setTimeout(() => {
+      turtleTxVid.removeEventListener("ended", onEnded);
+      turtleTxVid.pause();
+      try { turtleTxVid.currentTime = 0; } catch (_) {}
+      setTxReplayVisible(true);
+      setTxVisual(false, "READY");
+    }, 30000); // 30s safety net
+  } catch (_) {
+    setTxVisual(false, "READY");
+  }
+}
+/** =========================
+ *  SAFE DOM HELPERS
+ *  ========================= */
+const outputEl = document.getElementById('output');
+
+function setStatus(text, cls = "status") {
+  outputEl.innerHTML = "";
+  const s = document.createElement("strong");
+  s.className = cls;
+  s.textContent = text;
+  outputEl.appendChild(s);
+  if (cls === "error") outputEl.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function appendLine(label, value) {
+  const div = document.createElement("div");
+  const b = document.createElement("strong");
+  b.textContent = label + " ";
+  div.appendChild(b);
+  div.appendChild(document.createTextNode(value));
+  outputEl.appendChild(div);
+}
+
+/** =========================
+ *  AUDIO ENGINE (live beeps)
+ *  ========================= */
+const MorseTiming = {
+  unitMs: 60,
+  freqHz: 700,
+  gain: 0.4,
+};
+
+window.morseAudio = {
+  audioCtx: null,
+  gainNode: null,
+  playing: false,
+  paused: true,
+  endTimer: null,
+};
+
+async function ensureAudio() {
+  const st = window.morseAudio;
+  if (!st.audioCtx || st.audioCtx.state === "closed") {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const gainNode = ctx.createGain();
+    gainNode.gain.value = MorseTiming.gain;
+    gainNode.connect(ctx.destination);
+    st.audioCtx = ctx;
+    st.gainNode = gainNode;
+    st.playing = false;
+    st.paused = true;
+  }
+  if (st.audioCtx.state === "suspended") {
+    await st.audioCtx.resume();
+  }
+}
+
+function resetPlaybackUI() {
+  const pp = document.getElementById("playPauseBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  if (pp) {
+    pp.textContent = "Play Morse Sound";
+    pp.classList.remove("paused");
+  }
+  if (stopBtn) stopBtn.disabled = true;
+}
+
+function stopMorsePlayback() {
+  const st = window.morseAudio;
+  if (st.endTimer) {
+    clearTimeout(st.endTimer);
+    st.endTimer = null;
+  }
+  if (st.audioCtx && st.audioCtx.state !== "closed") {
+    // Capture ref before nulling; close() is async but we can safely discard the old context
+    const ctx = st.audioCtx;
+    ctx.close().catch(() => {});
+  }
+  st.audioCtx = null;
+  st.gainNode = null;
+  st.playing = false;
+  st.paused = true;
+  resetPlaybackUI();
+}
+
+async function playMorse(morseStr) {
+  if (!morseStr) throw new Error("No Morse to play");
+
+  stopMorsePlayback();
+  await ensureAudio();
+
+  const st = window.morseAudio;
+  const ctx = st.audioCtx;
+  const gainNode = st.gainNode;
+
+  const sigLevel = signalQuality();
+  const degraded = degradeMorse(morseStr, sigLevel);
+  const jitterFactor = (100 - sigLevel) / 100;
+
+  const unit = MorseTiming.unitMs;
+  const dotMs = unit;
+  const dashMs = unit * 3;
+  const elemGapMs = unit;
+  const letterGapMs = unit * 3;
+  const wordGapMs = unit * 7;
+
+  const playBeep = (startTimeSec, durationSec) => {
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(MorseTiming.freqHz, startTimeSec);
+    osc.connect(gainNode);
+    osc.start(startTimeSec);
+    osc.stop(startTimeSec + durationSec);
+  };
+
+  let t = ctx.currentTime + 0.08;
+
+  for (const sym of degraded) {
+    if (jitterFactor > 0) t += Math.random() * jitterFactor * unit * 0.25 / 1000;
+    if (sym === ".") {
+      playBeep(t, dotMs / 1000);
+      t += (dotMs + elemGapMs) / 1000;
+    } else if (sym === "-") {
+      playBeep(t, dashMs / 1000);
+      t += (dashMs + elemGapMs) / 1000;
+    } else if (sym === " ") {
+      t += (letterGapMs) / 1000;
+    } else if (sym === "/") {
+      t += (wordGapMs) / 1000;
+    }
+  }
+
+  st.playing = true;
+  st.paused = false;
+
+  setTxVisual(true, "BEEPING");
+
+  const totalMs = Math.max(0, (t - ctx.currentTime) * 1000);
+  st.endTimer = setTimeout(() => {
+    st.playing = false;
+    st.paused = true;
+    resetPlaybackUI();
+    setTxVisual(false, "READY");
+  }, totalMs + 200);
+}
+
+async function toggleMorsePlayback(morseStr) {
+  const pp = document.getElementById("playPauseBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const st = window.morseAudio;
+
+  if (!st.playing) {
+    await playMorse(morseStr);
+    pp.textContent = "Pause Playback";
+    pp.classList.add("paused");
+    stopBtn.disabled = false;
+    return;
+  }
+
+  if (!st.paused) {
+    await st.audioCtx.suspend();
+    st.paused = true;
+    pp.textContent = "Resume Playback";
+    pp.classList.remove("paused");
+    setTxVisual(true, "PAUSED");
+  } else {
+    await st.audioCtx.resume();
+    st.paused = false;
+    pp.textContent = "Pause Playback";
+    pp.classList.add("paused");
+    setTxVisual(true, "BEEPING");
+  }
+}
+
+/** =========================
+ *  WAV export (downloadable)
+ *  ========================= */
+function buildMorseTimelineMs(morseStr, unitMs) {
+  const dot = unitMs;
+  const dash = unitMs * 3;
+  const elemGap = unitMs;
+  const letterGap = unitMs * 3;
+  const wordGap = unitMs * 7;
+  const timeline = [];
+  for (const sym of morseStr) {
+    if (sym === ".") {
+      timeline.push({ tone: true, ms: dot });
+      timeline.push({ tone: false, ms: elemGap });
+    } else if (sym === "-") {
+      timeline.push({ tone: true, ms: dash });
+      timeline.push({ tone: false, ms: elemGap });
+    } else if (sym === " ") {
+      timeline.push({ tone: false, ms: letterGap });
+    } else if (sym === "/") {
+      timeline.push({ tone: false, ms: wordGap });
+    }
+  }
+  while (timeline.length && timeline[timeline.length - 1].tone === false) timeline.pop();
+  return timeline;
+}
+
+function floatTo16BitPCM(view, offset, input) {
+  for (let i = 0; i < input.length; i++, offset += 2) {
+    let s = Math.max(-1, Math.min(1, input[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+}
+
+function writeString(view, offset, str) {
+  for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+}
+
+function encodeWAV(samples, sampleRate) {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+
+  floatTo16BitPCM(view, 44, samples);
+  return new Blob([view], { type: 'audio/wav' });
+}
+
+function synthMorseWavBlob(morseStr, opts = {}) {
+  const sampleRate = opts.sampleRate || 44100;
+  const freq = opts.freqHz || MorseTiming.freqHz;
+  const unit = opts.unitMs || MorseTiming.unitMs;
+  const volume = (typeof opts.volume === "number") ? opts.volume : 0.35;
+  const noise = typeof opts.noise === "number" ? opts.noise : 0; // 0–1 static noise level
+  const sigLevel = typeof opts.signalLevel === "number" ? opts.signalLevel : 100;
+
+  morseStr = degradeMorse(morseStr, sigLevel); // apply symbol errors
+
+  const timeline = buildMorseTimelineMs(morseStr, unit);
+  const totalMs = timeline.reduce((a, x) => a + x.ms, 0);
+  const totalSamples = Math.ceil(totalMs / 1000 * sampleRate);
+  const samples = new Float32Array(totalSamples);
+
+  let idx = 0;
+  let phase = 0;
+  const phaseInc = 2 * Math.PI * freq / sampleRate;
+  const fadeMs = Math.min(6, unit * 0.2);
+  const fadeSamples = Math.max(1, Math.floor(fadeMs / 1000 * sampleRate));
+
+  const writeSegment = (tone, ms) => {
+    const n = Math.floor(ms / 1000 * sampleRate);
+    for (let i = 0; i < n && idx < samples.length; i++) {
+      let v = 0;
+      if (tone) {
+        let amp = volume;
+        if (i < fadeSamples) amp *= (i / fadeSamples);
+        if (n - i - 1 < fadeSamples) amp *= ((n - i - 1) / fadeSamples);
+        v = Math.sin(phase) * amp;
+        phase += phaseInc;
+        if (phase > 2*Math.PI) phase -= 2*Math.PI;
+      }
+      if (noise > 0) v = Math.max(-1, Math.min(1, v + (Math.random() * 2 - 1) * noise * (tone ? 0.06 : 0.14)));
+      samples[idx++] = v;
+    }
+  };
+
+  for (const seg of timeline) writeSegment(seg.tone, seg.ms);
+  return encodeWAV(samples, sampleRate);
+}
+
+/** =========================
+ *  UI: TRANSMIT / CLEAR / DECRYPT
+ *  ========================= */
+function clearAll() {
+  stopMorsePlayback();
+  stopTurtleTx(true);
+  setTxVisual(false, "IDLE");
+
+  // Reset fields
+  document.getElementById('message').value = "";
+  document.getElementById('password').value = "";
+  document.getElementById('pepper').value = "";
+  document.getElementById('morseInput').value = "";
+  document.getElementById('decryptPassword').value = "";
+  document.getElementById('decryptPepper').value = "";
+  
+  // Reset Ed25519 fields
+  document.getElementById('ed25519PrivateKey').value = "";
+  document.getElementById('ed25519PublicKey').value = "";
+  document.getElementById('enableSigning').checked = false;
+  document.getElementById('signingSection').style.display = "none";
+
+  // Reset uploaded audio
+  if (uploadedAudioUrl) {
+    try { URL.revokeObjectURL(uploadedAudioUrl); } catch (_) {}
+    uploadedAudioUrl = null;
+  }
+  if (audioUpload) audioUpload.value = "";
+  if (uploadedAudio) {
+    uploadedAudio.pause();
+    uploadedAudio.removeAttribute("src");
+    uploadedAudio.load();
+    uploadedAudio.style.display = "none";
+  }
+  if (audioUploadName) audioUploadName.textContent = "No audio loaded";
+  if (playUploadedBtn) playUploadedBtn.disabled = true;
+  if (stopUploadedBtn) stopUploadedBtn.disabled = true;
+  if (decodeWavBtn) decodeWavBtn.disabled = true;
+
+  const progressWrap = document.getElementById("decodeProgress");
+  if (progressWrap) progressWrap.style.display = "none";
+
+  setStatus("Ready...");
+}
+
+async function runDadMode() {
+  const msg = document.getElementById('message').value.trim();
+  const pw  = document.getElementById('password').value;
+  const pep = document.getElementById('pepper').value;
+  const signingEnabled = document.getElementById('enableSigning').checked;
+  const privateKeyBase64 = document.getElementById('ed25519PrivateKey').value.trim();
+
+  if (!msg) { setStatus("Enter a message first", "error"); return; }
+  if (!pw || pw.length < 14) { setStatus("Password must be at least 14 characters (currently " + (pw ? pw.length : 0) + ")", "error"); return; }
+
+  // Validate signing inputs if enabled
+  if (signingEnabled && !privateKeyBase64) {
+    setStatus("Ed25519 signing enabled but no private key provided", "error");
+    return;
+  }
+
+  setTxVisual(true, "ENCRYPT");
+  setStatus("Encrypting (AES-256-GCM)...", "status");
+
+  // Prevent double-click transmit while working
+  const txBtn = document.getElementById("txBtn");
+  if (txBtn) txBtn.disabled = true;
+
+  // If pointerdown did not already start it, attempt playback here too.
+  if (turtleTxVid && turtleTxVid.paused) {
+    playTurtleDuringTx();
+  }
+
+  let signatureBase64 = null;
+
+  try {
+    // Sign the plaintext if enabled
+    if (signingEnabled) {
+      setTxVisual(true, "SIGNING");
+      setStatus("Signing message (Ed25519)...", "status");
+      try {
+        signatureBase64 = await signMessageEd25519(msg, privateKeyBase64);
+      } catch (sigErr) {
+        throw new Error("Ed25519 signing failed: " + (sigErr?.message || String(sigErr)));
+      }
+    }
+
+    setTxVisual(true, "ENCRYPT");
+    setStatus("Encrypting (AES-256-GCM)...", "status");
+
+    const { hex, meta } = await aesGcmEncrypt(msg, pw, pep);
+    const morse = toMorseHex(hex);
+
+    outputEl.innerHTML = "";
+    (() => {
+      const d = document.createElement("div");
+      const b = document.createElement("strong");
+      b.textContent = "Encrypted hex (shortened): ";
+      const tip = document.createElement("span");
+      tip.className = "help-tip";
+      tip.textContent = "?";
+      tip.setAttribute("data-tip",
+        "DMM1 v2 header: magic (4B) + version + KDF params + salt (16B) + IV (12B) = 40 bytes total. " +
+        "These are NOT secret \u2014 bundled so the same password+message never produces the same ciphertext twice. " +
+        "The rest is AES-GCM ciphertext + authentication tag.");
+      b.appendChild(tip);
+      d.appendChild(b);
+      d.appendChild(document.createTextNode(`${hex.slice(0,80)}\u2026 (${hex.length} chars)`));
+      outputEl.appendChild(d);
+    })();
+
+    appendLine("KDF:", `Argon2id (t=${meta?.timeCost}, m=${meta?.memoryCostKiB}KiB, p=${meta?.parallelism})` + (meta?.pepperUsed ? " + Signal Key" : ""));
+    const hr = document.createElement("div");
+    hr.className = "hr";
+    outputEl.appendChild(hr);
+
+    const morseDiv = document.createElement("div");
+    morseDiv.id = "morseOutput";
+
+    const morseTitle = document.createElement("strong");
+    morseTitle.textContent = "Morse to transmit:";
+    morseDiv.appendChild(morseTitle);
+    morseDiv.appendChild(document.createElement("br"));
+
+    const morseText = document.createElement("div");
+    morseText.textContent = morse;
+    morseDiv.appendChild(morseText);
+    outputEl.appendChild(morseDiv);
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "audio-row";
+
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "copy-btn";
+    copyBtn.textContent = "Copy Morse";
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(morse);
+        showToast("Morse copied to clipboard!");
+      } catch (e) {
+        // Fallback: select text for manual copy
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = morse;
+          ta.style.cssText = 'position:fixed;left:-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
+          showToast("Morse copied to clipboard!");
+        } catch (_) {
+          alert("Could not copy to clipboard. Please select and copy the Morse text manually.");
+        }
+      }
+    });
+
+    const playPauseBtn = document.createElement("button");
+    playPauseBtn.id = "playPauseBtn";
+    playPauseBtn.textContent = "Play Morse Sound";
+    playPauseBtn.addEventListener("click", () => {
+      toggleMorsePlayback(morse).catch(err => alert("Audio error: " + err.message));
+    });
+
+    const stopBtn = document.createElement("button");
+    stopBtn.id = "stopBtn";
+    stopBtn.textContent = "Stop";
+    stopBtn.disabled = true;
+    stopBtn.addEventListener("click", stopMorsePlayback);
+
+    const wavBtn = document.createElement("button");
+    wavBtn.textContent = "Download Morse WAV";
+    wavBtn.addEventListener("click", () => {
+      try {
+        // Always use signal=100 for downloadable WAV so the file is decryptable.
+        // Signal degradation is a live-playback effect only.
+        const blob = synthMorseWavBlob(morse, { unitMs: MorseTiming.unitMs, freqHz: MorseTiming.freqHz, noise: 0, signalLevel: 100 });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `morse_${new Date().toISOString().replace(/[:.]/g,'-')}.wav`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        // Revoke after generous delay so the download can finish
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } catch (e) {
+        alert("Could not generate WAV: " + (e?.message || String(e)));
+      }
+    });
+
+    btnRow.appendChild(copyBtn);
+    btnRow.appendChild(playPauseBtn);
+    btnRow.appendChild(stopBtn);
+    btnRow.appendChild(wavBtn);
+    outputEl.appendChild(btnRow);
+
+    // Display Ed25519 signature if signing was enabled
+    if (signatureBase64) {
+      const sigHr = document.createElement("div");
+      sigHr.className = "hr";
+      outputEl.appendChild(sigHr);
+
+      const sigDiv = document.createElement("div");
+      sigDiv.style.cssText = "background:#0a1a0a;padding:12px;border-radius:6px;border:1px solid #006633;margin-top:8px;";
+
+      const sigTitle = document.createElement("strong");
+      sigTitle.style.color = "#88ffcc";
+      sigTitle.textContent = "🔏 Ed25519 Signature:";
+      sigDiv.appendChild(sigTitle);
+      sigDiv.appendChild(document.createElement("br"));
+
+      const sigText = document.createElement("code");
+      sigText.style.cssText = "font-size:12px;word-break:break-all;color:#ccffdd;";
+      sigText.textContent = ED25519_SIG_LINE_PREFIX + signatureBase64;
+      sigDiv.appendChild(sigText);
+
+      const sigCopyBtn = document.createElement("button");
+      sigCopyBtn.className = "copy-btn";
+      sigCopyBtn.style.marginTop = "8px";
+      sigCopyBtn.textContent = "Copy Morse + Signature";
+      sigCopyBtn.addEventListener("click", async () => {
+        const fullOutput = morse + "\n" + ED25519_SIG_LINE_PREFIX + signatureBase64;
+        await navigator.clipboard.writeText(fullOutput);
+        alert("Copied Morse code + signature to clipboard!");
+      });
+      sigDiv.appendChild(document.createElement("br"));
+      sigDiv.appendChild(sigCopyBtn);
+
+      const sigNote = document.createElement("div");
+      sigNote.className = "mini";
+      sigNote.style.marginTop = "8px";
+      sigNote.textContent = "Share your PUBLIC key with the recipient so they can verify this signature. The signature is NOT encrypted or embedded in the Morse—include it when sharing.";
+      sigDiv.appendChild(sigNote);
+
+      outputEl.appendChild(sigDiv);
+    }
+
+    // End transmit visuals (honors minimum visible animation time)
+    stopTurtleTx(false);
+
+  } catch (e) {
+    setTxVisual(false, "IDLE");
+    stopTurtleTx(true);
+    setStatus("Error: " + (e?.message || String(e)), "error");
+  } finally {
+    const txBtn = document.getElementById("txBtn");
+    if (txBtn) txBtn.disabled = false;
+  }
+}
+
+async function decryptDadMode() {
+  const rawInput = document.getElementById('morseInput').value.trim();
+  const pw = document.getElementById('decryptPassword').value;
+  const pep = document.getElementById('decryptPepper').value;
+  const publicKeyBase64 = document.getElementById('ed25519PublicKey').value.trim();
+
+  if (!rawInput) { alert("Paste Morse first"); return; }
+  if (!pw) { alert("Enter decryption password"); return; }
+
+  try {
+    // Extract signature if present
+    const { morseOnly, signatureBase64 } = extractSignatureFromInput(rawInput);
+    const morse = morseOnly;
+
+    const { hex, invalid } = morseToHex(morse);
+    if (invalid || hex.includes('?')) throw new Error("Invalid Morse – check copy/paste or typos");
+
+    const plaintext = await aesGcmDecrypt(hex, pw, pep);
+
+    // Handle signature verification
+    let sigStatus = "none";
+    let sigMessage = "";
+
+    if (signatureBase64) {
+      if (publicKeyBase64) {
+        // Verify signature
+        try {
+          const isValid = await verifySignatureEd25519(plaintext, signatureBase64, publicKeyBase64);
+          if (isValid) {
+            sigStatus = "valid";
+            sigMessage = "✅ Signature VALID – message authenticity confirmed!";
+          } else {
+            sigStatus = "invalid";
+            sigMessage = "⚠️ SIGNATURE INVALID – message may have been tampered with or wrong public key!";
+          }
+        } catch (verifyErr) {
+          sigStatus = "error";
+          sigMessage = "⚠️ Signature verification error: " + (verifyErr?.message || String(verifyErr));
+        }
+      } else {
+        sigStatus = "no-key";
+        sigMessage = "⚠️ Signature present but no public key provided – cannot verify authenticity. Proceed with caution.";
+      }
+    }
+
+    // Build result message
+    let resultMsg = `Success!\n\nOriginal message:\n${plaintext}`;
+    if (sigMessage) {
+      resultMsg += `\n\n${sigMessage}`;
+    }
+
+    // Check if signature was invalid - warn but still show decrypted message
+    if (sigStatus === "invalid") {
+      alert(`⚠️ WARNING: SIGNATURE INVALID!\n\nThe message decrypted successfully, but the signature verification FAILED.\n\nThis could mean:\n• The message was tampered with\n• Wrong sender public key\n• Signature was corrupted\n\nDecrypted message:\n${plaintext}\n\nProceed with extreme caution!`);
+    } else {
+      alert(resultMsg);
+    }
+
+    const br = document.createElement("br");
+    outputEl.appendChild(br);
+
+    const safe = document.createElement("div");
+    safe.className = "status";
+    safe.style.color = sigStatus === "invalid" ? "#ff6666" : "#88ffcc";
+    safe.textContent = `Decrypted: ${plaintext}`;
+    outputEl.appendChild(safe);
+
+    // Display signature status in output
+    if (sigMessage) {
+      const sigStatusDiv = document.createElement("div");
+      sigStatusDiv.style.cssText = "margin-top:8px;padding:10px;border-radius:6px;font-family:monospace;";
+      if (sigStatus === "valid") {
+        sigStatusDiv.style.background = "#0a2a0a";
+        sigStatusDiv.style.border = "1px solid #00aa66";
+        sigStatusDiv.style.color = "#00ff88";
+      } else if (sigStatus === "invalid" || sigStatus === "error") {
+        sigStatusDiv.style.background = "#2a0a0a";
+        sigStatusDiv.style.border = "1px solid #aa0000";
+        sigStatusDiv.style.color = "#ff6666";
+      } else {
+        sigStatusDiv.style.background = "#2a2a0a";
+        sigStatusDiv.style.border = "1px solid #aa8800";
+        sigStatusDiv.style.color = "#ffcc00";
+      }
+      sigStatusDiv.textContent = sigMessage;
+      outputEl.appendChild(sigStatusDiv);
+    }
+
+  } catch (err) {
+    alert(`Failed: ${err.message}\n\nLikely causes:\n- Wrong password\n- Incomplete/invalid Morse\n- Typos in Morse`);
+  }
+}
+
+/** =========================
+ *  Uploaded WAV playback + decode
+ *  ========================= */
+const audioUpload = document.getElementById("audioUpload");
+const uploadedAudio = document.getElementById("uploadedAudio");
+let uploadedAudioUrl = null;
+const audioUploadName = document.getElementById("audioUploadName");
+const playUploadedBtn = document.getElementById("playUploadedBtn");
+const stopUploadedBtn = document.getElementById("stopUploadedBtn");
+const decodeWavBtn = document.getElementById("decodeWavBtn");
+
+audioUpload.addEventListener("change", () => {
+  const file = audioUpload.files && audioUpload.files[0];
+  // Reset progress bar whenever a new file is chosen
+  const progressWrap = document.getElementById("decodeProgress");
+  if (progressWrap) progressWrap.style.display = "none";
+
+  if (!file) {
+    audioUploadName.textContent = "No audio loaded";
+    uploadedAudio.style.display = "none";
+    playUploadedBtn.disabled = true;
+    stopUploadedBtn.disabled = true;
+    decodeWavBtn.disabled = true;
+    return;
+  }
+  audioUploadName.textContent = file.name;
+  if (uploadedAudioUrl) {
+    try { URL.revokeObjectURL(uploadedAudioUrl); } catch (_) {}
+    uploadedAudioUrl = null;
+  }
+  const url = URL.createObjectURL(file);
+  uploadedAudioUrl = url;
+  uploadedAudio.src = url;
+  uploadedAudio.style.display = "block";
+  playUploadedBtn.disabled = false;
+  stopUploadedBtn.disabled = false;
+  decodeWavBtn.disabled = false;
+  showToast("Audio loaded \u2014 click \u201CDecode WAV \u2192 Morse\u201D to extract Morse code.");
+});
+
+playUploadedBtn.addEventListener("click", () => {
+  uploadedAudio.play().catch(() => {});
+});
+
+stopUploadedBtn.addEventListener("click", () => {
+  uploadedAudio.pause();
+  uploadedAudio.currentTime = 0;
+});
+
+decodeWavBtn.addEventListener("click", () => {
+  const file = audioUpload.files && audioUpload.files[0];
+  if (file) decodeMorseWav(file);
+});
+
+/** Update the decode progress bar. */
+function setDecodeProgress(label, pct, isError = false) {
+  const wrap = document.getElementById("decodeProgress");
+  const lbl  = document.getElementById("decodeProgressLabel");
+  const bar  = document.getElementById("decodeProgressBar");
+  if (!wrap) return;
+  wrap.style.display = "block";
+  lbl.textContent    = label;
+  lbl.style.color    = isError ? "#ff6666" : "#88ffcc";
+  bar.style.width    = pct + "%";
+  bar.style.background = isError
+    ? "linear-gradient(to right, #aa2200, #ff4444)"
+    : "linear-gradient(to right, #00aa66, #00ff88)";
+}
+
+/**
+ * Decode a Morse WAV file into a Morse string and populate the decrypt input.
+ * Works by computing RMS energy in short frames, thresholding to get
+ * tone-on/tone-off runs, then classifying by duration into dots, dashes, and gaps.
+ */
+async function decodeMorseWav(file) {
+  decodeWavBtn.disabled = true;
+  decodeWavBtn.textContent = "Decoding\u2026";
+
+  try {
+    setDecodeProgress("\uD83D\uDCE5 Step 1 / 6 \u2014 Reading audio file\u2026", 8);
+    const arrayBuffer = await file.arrayBuffer();
+
+    setDecodeProgress("\uD83C\uDFBC Step 2 / 6 \u2014 Decoding audio data\u2026", 22);
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioBuffer;
+    try {
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    } finally {
+      audioCtx.close();
+    }
+
+    // Mix down to mono
+    setDecodeProgress("\uD83D\uDD0A Step 3 / 6 \u2014 Mixing to mono & measuring energy\u2026", 38);
+    const sampleRate = audioBuffer.sampleRate;
+    const numChannels = audioBuffer.numberOfChannels;
+    const length = audioBuffer.length;
+    const mono = new Float32Array(length);
+    for (let ch = 0; ch < numChannels; ch++) {
+      const data = audioBuffer.getChannelData(ch);
+      for (let i = 0; i < length; i++) mono[i] += data[i] / numChannels;
+    }
+
+    // RMS energy in 5 ms frames
+    const frameMs = 5;
+    const frameSamples = Math.max(1, Math.floor(sampleRate * frameMs / 1000));
+    const numFrames = Math.floor(length / frameSamples);
+    const energy = new Float32Array(numFrames);
+    for (let f = 0; f < numFrames; f++) {
+      const start = f * frameSamples;
+      let sum = 0;
+      for (let i = 0; i < frameSamples; i++) {
+        const v = mono[start + i];
+        sum += v * v;
+      }
+      energy[f] = Math.sqrt(sum / frameSamples);
+    }
+
+    // Threshold at 15% of the 95th-percentile energy value
+    setDecodeProgress("📊 Step 4 / 6 — Detecting tone on/off…", 55);
+    const sorted = Array.from(energy).sort((a, b) => a - b);
+    const p95 = sorted[Math.floor(sorted.length * 0.95)];
+    const threshold = p95 * 0.15;
+    if (p95 < 1e-5) throw new Error("Audio appears silent — is this a Morse WAV?");
+
+    // Binary on/off
+    const binary = Array.from(energy).map(e => e > threshold ? 1 : 0);
+
+    // Run-length encoding → [{val, ms}]
+    const runs = [];
+    let cur = binary[0], count = 1;
+    for (let i = 1; i < binary.length; i++) {
+      if (binary[i] === cur) { count++; }
+      else { runs.push({ val: cur, ms: count * frameMs }); cur = binary[i]; count = 1; }
+    }
+    runs.push({ val: cur, ms: count * frameMs });
+
+    // Strip leading/trailing silence
+    while (runs.length && runs[0].val === 0) runs.shift();
+    while (runs.length && runs[runs.length - 1].val === 0) runs.pop();
+    if (!runs.length) throw new Error("No tone detected — is this a Morse WAV?");
+
+    // Estimate unit (dot) length from ON durations.
+    // Strategy: find the largest relative jump in sorted ON durations — that gap
+    // marks the dot/dash boundary. Take the mean of the lower (dot) cluster.
+    // Falls back gracefully when all symbols are the same type.
+    setDecodeProgress("🔬 Step 5 / 6 — Estimating dot/dash lengths…", 72);
+    const onDurs = runs.filter(r => r.val === 1).map(r => r.ms).sort((a, b) => a - b);
+    let rawUnit = MorseTiming.unitMs;
+    if (onDurs.length) {
+      const medDur = onDurs[Math.floor(onDurs.length / 2)];
+      let maxRatio = 1, splitIdx = -1;
+      for (let i = 0; i < onDurs.length - 1; i++) {
+        const ratio = onDurs[i + 1] / (onDurs[i] || 1);
+        if (ratio > maxRatio) { maxRatio = ratio; splitIdx = i + 1; }
+      }
+      if (maxRatio > 1.8 && splitIdx > 0) {
+        // bimodal: lower cluster = dots
+        const dotCluster = onDurs.slice(0, splitIdx);
+        rawUnit = Math.round(dotCluster.reduce((s, v) => s + v, 0) / dotCluster.length);
+      } else if (medDur > 100) {
+        rawUnit = Math.round(medDur / 3); // unimodal long → all dashes
+      } else {
+        rawUnit = medDur; // unimodal short → all dots
+      }
+    }
+    const unitMs = Math.max(20, rawUnit);
+
+    // Classify runs
+    setDecodeProgress("📝 Step 6 / 6 — Classifying dots & dashes…", 88);
+    let morse = "";
+    for (const r of runs) {
+      if (r.val === 1) {
+        morse += r.ms < unitMs * 2 ? "." : "-";
+      } else {
+        if      (r.ms < unitMs * 2) { /* element gap — skip */ }
+        else if (r.ms < unitMs * 5) { morse += " "; }   // letter gap
+        else                        { morse += " / "; }  // word gap
+      }
+    }
+
+    morse = morse.trim().replace(/\s*\/\s*/g, " / ").replace(/  +/g, " ");
+    if (!morse) throw new Error("Could not extract Morse symbols from audio");
+
+    document.getElementById("morseInput").value = morse;
+    document.getElementById("morseInput").scrollIntoView({ behavior: "smooth" });
+    setDecodeProgress("\u2705 Done! Morse code extracted \u2014 enter your password and click Decrypt.", 100);
+
+  } catch (e) {
+    setDecodeProgress("\u274C Failed: " + (e?.message || String(e)), 100, true);
+  } finally {
+    decodeWavBtn.disabled = false;
+    decodeWavBtn.textContent = "Decode WAV \u2192 Morse";
+  }
+}
+
+/** =========================
+ *  Toast notification
+ *  ========================= */
+let _toastTimer = null;
+function showToast(msg, duration = 3800) {
+  const el = document.getElementById("toastMsg");
+  if (!el) return;
+  if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+  el.textContent = msg;
+  el.classList.add("show");
+  _toastTimer = setTimeout(() => {
+    el.classList.remove("show");
+    _toastTimer = null;
+  }, duration);
+}
+
+/** =========================
+ *  Signal quality helpers
+ *  ========================= */
+function signalQuality() {
+  const sl = document.getElementById("signalSlider");
+  return sl ? parseInt(sl.value, 10) : 100;
+}
+
+function signalLabelText(v) {
+  if (v >= 100) return "100% \u2014 Crystal clear";
+  if (v >= 80)  return v + "% \u2014 Mostly stable";
+  if (v >= 50)  return v + "% \u2014 Getting noisy\u2026";
+  if (v >= 25)  return v + "% \u2014 Weak signal!";
+  if (v > 0)    return v + "% \u2014 Total garbage \uD83D\uDC80";
+  return "0% \u2014 Dead air \uD83D\uDC80";
+}
+
+/** =========================
+ *  Morse degradation (signal simulation)
+ *  ========================= */
+function degradeMorse(morseStr, signalLevel) {
+  if (signalLevel >= 100) return morseStr;
+  const errRate = (100 - signalLevel) / 100; // 0 = clean, 1 = chaos
+  let out = '';
+  for (const c of morseStr) {
+    if (c === '.' || c === '-') {
+      const r = Math.random();
+      if (r < errRate * 0.25) continue;                      // drop element
+      if (r < errRate * 0.42) { out += c === '.' ? '-' : '.'; continue; } // flip
+      if (r < errRate * 0.52) { out += c + (Math.random() < 0.5 ? '.' : '-'); continue; } // phantom extra
+      out += c;
+    } else if (c === ' ') {
+      out += c;
+      if (Math.random() < errRate * 0.35) out += ' '; // extra gap
+    } else {
+      out += c; // '/' word-gap or other
+    }
+  }
+  return out || morseStr; // fallback to original if degraded to nothing
+}
+
+/** =========================
+ *  Wire up controls
+ *  ========================= */
+const txBtnEl = document.getElementById("txBtn");
+txBtnEl.addEventListener("pointerdown", () => {
+  // Earlier than click: this is the best moment for unmuted media start.
+  if (turtleTxVid && turtleTxVid.paused) {
+    playTurtleDuringTx().catch(() => {});
+  }
+});
+txBtnEl.addEventListener("click", () => runDadMode());
+
+const txReplayBtnEl = document.getElementById("txReplayBtn");
+const txMuteBtnEl = document.getElementById("txMuteBtn");
+txReplayBtnEl?.addEventListener("click", () => {
+  playTurtleDuringTx().catch(() => {});
+});
+txMuteBtnEl?.addEventListener("click", () => {
+  setTxMuteState(!txMutedEnabled());
+});
+
+document.getElementById("clearBtn").addEventListener("click", () => clearAll());
+document.getElementById("decBtn").addEventListener("click", () => decryptDadMode());
+
+document.getElementById("showPw").addEventListener("change", (e) => {
+  document.getElementById("password").type = e.target.checked ? "text" : "password";
+});
+document.getElementById("showPep").addEventListener("change", (e) => {
+  document.getElementById("pepper").type = e.target.checked ? "text" : "password";
+});
+document.getElementById("showDecPw").addEventListener("change", (e) => {
+  document.getElementById("decryptPassword").type = e.target.checked ? "text" : "password";
+});
+document.getElementById("showDecPep").addEventListener("change", (e) => {
+  document.getElementById("decryptPepper").type = e.target.checked ? "text" : "password";
+});
+
+// Ed25519 signing section toggle
+document.getElementById("enableSigning").addEventListener("change", (e) => {
+  const signingSection = document.getElementById("signingSection");
+  signingSection.style.display = e.target.checked ? "block" : "none";
+});
+
+// Show/hide private key
+document.getElementById("showPrivKey").addEventListener("change", (e) => {
+  const privKeyArea = document.getElementById("ed25519PrivateKey");
+  // Textareas don't have type attribute, so we use a CSS workaround
+  privKeyArea.style.webkitTextSecurity = e.target.checked ? "none" : "disc";
+  privKeyArea.style.textSecurity = e.target.checked ? "none" : "disc";
+});
+
+// Generate Ed25519 key pair button
+document.getElementById("generateEd25519Btn").addEventListener("click", async () => {
+  const btn = document.getElementById("generateEd25519Btn");
+  btn.disabled = true;
+  btn.textContent = "Generating...";
+  
+  try {
+    const { privateKeyBase64, publicKeyBase64 } = await generateEd25519KeyPair();
+    
+    // Auto-fill private key field
+    document.getElementById("ed25519PrivateKey").value = privateKeyBase64;
+    
+    // Show the keys in an alert
+    const keyInfo = `Ed25519 Key Pair Generated!\n\n` +
+      `🔒 PRIVATE KEY (PKCS8 base64) - KEEP SECRET:\n${privateKeyBase64}\n\n` +
+      `🔓 PUBLIC KEY (SPKI base64) - SHARE WITH RECIPIENTS:\n${publicKeyBase64}\n\n` +
+      `The private key has been auto-filled above.\n` +
+      `Copy and save both keys securely!`;
+    
+    alert(keyInfo);
+    
+    // Also copy public key to clipboard for convenience
+    try {
+      await navigator.clipboard.writeText(publicKeyBase64);
+      showToast("Public key copied to clipboard!");
+    } catch (_) {
+      // Clipboard might not be available
+    }
+    
+  } catch (err) {
+    alert("Error generating key pair: " + (err?.message || String(err)));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Generate Ed25519 Key Pair";
+  }
+});
+
+const signalSliderEl = document.getElementById("signalSlider");
+const signalValueLabelEl = document.getElementById("signalValueLabel");
+if (signalSliderEl) {
+  signalSliderEl.addEventListener("input", () => {
+    signalValueLabelEl.textContent = signalLabelText(parseInt(signalSliderEl.value, 10));
+  });
+}
+
+// Helpful console hint if video fails to load
+turtleTxVid?.addEventListener("error", () => console.warn("turtle.mp4 failed to load (check filename/path)."));
+
+// Prime transmit media so audible playback is ready when Transmit is clicked.
+primeTurtleTxVideo();
+setTxMuteState(false);
+setTxReplayVisible(false);
+
+setStatus("Ready...");
+setTxVisual(false, "IDLE");
+</script>
+
+<div id="toastMsg"></div>
+
+</body>
+</html>

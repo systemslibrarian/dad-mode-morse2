@@ -137,12 +137,45 @@ input[type="checkbox"] { accent-color: var(--green); }
   padding-top: 12px; margin-top: 24px; line-height: 1.8;
 }
 .crypto-info strong { color: var(--text2); }
+/* ==================== TURTLE HEADER ==================== */
+#turtleHeaderImg {
+  width: 200px; max-width: 100%; height: auto; border-radius: 12px;
+  background: #000; border: 1px solid rgba(0,255,136,0.25);
+  box-shadow: 0 0 14px rgba(0,255,136,0.1); display: block; margin: 0 auto 12px;
+}
+/* ==================== TURTLE TX VIDEO ==================== */
+.tx-media { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+#turtleTxVid {
+  width: 160px; max-width: 40%; height: auto; border-radius: 10px;
+  background: #000; border: 1px solid rgba(0,255,136,0.3);
+  box-shadow: 0 0 12px rgba(0,255,136,0.06);
+}
+.tx-transmitting #turtleTxVid {
+  outline: 2px solid rgba(0,255,136,0.5);
+  box-shadow: 0 0 16px rgba(0,255,136,0.18);
+}
+#txReplayBtn { display: none; }
+#txReplayBtn.show { display: inline-flex; }
+/* ==================== PAUSE / MUTE BUTTONS ==================== */
+.btn.paused { background: var(--amber); color: #000; border-color: var(--amber); }
+.btn.paused:hover { background: #cc8800; }
+#muteBtn { font-size: 0.7rem; }
+/* ==================== UPLOADED AUDIO ==================== */
+.audio-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.audio-controls .file-chip { font-size: 0.7rem; color: var(--text2); }
+#uploadedAudio { width: 100%; margin-top: 8px; display: none; border-radius: var(--radius); }
+/* ==================== QR UPLOAD ==================== */
+.qr-upload-section { margin-top: 8px; }
+.qr-upload-section canvas { display: none; }
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 400px) {
   html { font-size: 13px; }
   .app { padding: 10px; }
   .btn-row { flex-direction: column; }
   .btn { width: 100%; justify-content: center; }
+  #turtleHeaderImg { width: 100%; max-width: 280px; }
+  .tx-media { flex-direction: column; }
+  #turtleTxVid { width: 100%; max-width: 200px; }
 }
 </style>
 </head>
@@ -152,6 +185,7 @@ input[type="checkbox"] { accent-color: var(--green); }
 
 <div class="app">
   <div class="header">
+    <img id="turtleHeaderImg" src="./turtle.png" alt="Turtle transmitting Morse code">
     <h1>DAD'S MORSE</h1>
     <span class="status-badge" id="statusBadge"></span>
   </div>
@@ -212,9 +246,17 @@ input[type="checkbox"] { accent-color: var(--green); }
       </div>
     </div>
 
-    <div class="btn-row">
+    <div class="btn-row" id="txRow">
       <button class="btn btn-primary" id="transmitBtn">Encrypt &amp; Encode</button>
       <button class="btn" id="clearBtn">Clear All</button>
+    </div>
+
+    <div class="tx-media">
+      <video id="turtleTxVid" preload="auto" playsinline poster="./turtle.png">
+        <source src="./turtle.mp4" type="video/mp4">
+      </video>
+      <button class="btn" id="txReplayBtn">Replay</button>
+      <button class="btn" id="muteBtn">Mute: Off</button>
     </div>
   </div>
 
@@ -226,11 +268,23 @@ input[type="checkbox"] { accent-color: var(--green); }
     </div>
 
     <div class="section">
-      <div class="section-label">Upload WAV</div>
-      <input type="file" id="wavUpload" accept=".wav,audio/wav" style="font-size:0.8rem; color:var(--text2)">
-      <div class="btn-row">
-        <button class="btn" id="decodeWavBtn" disabled>Decode WAV</button>
+      <div class="section-label">Upload QR Code Image</div>
+      <input type="file" id="qrUpload" accept="image/*" style="font-size:0.8rem; color:var(--text2)">
+      <div class="qr-upload-section">
+        <canvas id="qrUploadCanvas"></canvas>
       </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Upload WAV</div>
+      <input type="file" id="wavUpload" accept=".wav,audio/wav,audio/*" style="font-size:0.8rem; color:var(--text2)">
+      <div class="audio-controls">
+        <button class="btn" id="playUploadedBtn" disabled>Play</button>
+        <button class="btn" id="stopUploadedBtn" disabled>Stop</button>
+        <button class="btn" id="decodeWavBtn" disabled>Decode WAV → Morse</button>
+        <span class="file-chip" id="audioUploadName"></span>
+      </div>
+      <audio id="uploadedAudio" controls preload="none"></audio>
       <div class="progress" id="progress">
         <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
         <div class="progress-label" id="progressLabel"></div>
@@ -273,8 +327,8 @@ input[type="checkbox"] { accent-color: var(--green); }
     <button class="btn" id="copyMorseBtn">Copy Morse</button>
     <button class="btn" id="copyBase64Btn">Copy Base64</button>
     <button class="btn" id="downloadWavBtn">Download WAV</button>
-    <button class="btn" id="playBtn">Play</button>
-    <button class="btn" id="stopBtn">Stop</button>
+    <button class="btn" id="playPauseBtn">Play</button>
+    <button class="btn" id="stopBtn" disabled>Stop</button>
   </div>
 
   <!-- ==================== CRYPTO INFO ==================== -->
@@ -3104,6 +3158,7 @@ function generateQR(text) {
 // ==================== AUDIO PLAYBACK ====================
 let audioCtx = null;
 let isPlaying = false;
+let isPaused = false;
 let stopTimer = null;
 
 async function playMorse(morseStr) {
@@ -3148,8 +3203,44 @@ async function playMorse(morseStr) {
   }
   
   isPlaying = true;
+  isPaused = false;
   const duration = (startTime - audioCtx.currentTime) * 1000;
-  stopTimer = setTimeout(stopPlayback, duration + 500);
+  stopTimer = setTimeout(() => {
+    stopPlayback();
+    resetPlaybackUI();
+  }, duration + 500);
+}
+
+async function toggleMorsePlayback(morseStr) {
+  const pp = document.getElementById('playPauseBtn');
+  const stop = document.getElementById('stopBtn');
+
+  if (!isPlaying) {
+    await playMorse(morseStr);
+    pp.textContent = 'Pause';
+    pp.classList.add('paused');
+    stop.disabled = false;
+    return;
+  }
+
+  if (!isPaused) {
+    await audioCtx.suspend();
+    isPaused = true;
+    pp.textContent = 'Resume';
+    pp.classList.remove('paused');
+  } else {
+    await audioCtx.resume();
+    isPaused = false;
+    pp.textContent = 'Pause';
+    pp.classList.add('paused');
+  }
+}
+
+function resetPlaybackUI() {
+  const pp = document.getElementById('playPauseBtn');
+  const stop = document.getElementById('stopBtn');
+  if (pp) { pp.textContent = 'Play'; pp.classList.remove('paused'); }
+  if (stop) stop.disabled = true;
 }
 
 function stopPlayback() {
@@ -3158,10 +3249,12 @@ function stopPlayback() {
     stopTimer = null;
   }
   if (audioCtx) {
-    audioCtx.close();
+    audioCtx.close().catch(() => {});
     audioCtx = null;
   }
   isPlaying = false;
+  isPaused = false;
+  resetPlaybackUI();
 }
 
 // ==================== UI ELEMENTS ====================
@@ -3189,7 +3282,7 @@ const actionButtons = document.getElementById('actionButtons');
 const copyMorseBtn = document.getElementById('copyMorseBtn');
 const copyBase64Btn = document.getElementById('copyBase64Btn');
 const downloadWavBtn = document.getElementById('downloadWavBtn');
-const playBtn = document.getElementById('playBtn');
+const playPauseBtn = document.getElementById('playPauseBtn');
 const stopBtn = document.getElementById('stopBtn');
 const signalSlider = document.getElementById('signalSlider');
 const signalValue = document.getElementById('signalValue');
@@ -3198,6 +3291,13 @@ const strengthText = document.getElementById('strengthText');
 const progress = document.getElementById('progress');
 const progressLabel = document.getElementById('progressLabel');
 const progressFill = document.getElementById('progressFill');
+const muteBtn = document.getElementById('muteBtn');
+const qrUpload = document.getElementById('qrUpload');
+const uploadedAudio = document.getElementById('uploadedAudio');
+const playUploadedBtn = document.getElementById('playUploadedBtn');
+const stopUploadedBtn = document.getElementById('stopUploadedBtn');
+const audioUploadName = document.getElementById('audioUploadName');
+let uploadedAudioUrl = null;
 
 // ==================== EVENT LISTENERS ====================
 showPw.addEventListener('change', (e) => {
@@ -3271,7 +3371,81 @@ generateBtn.addEventListener('click', async () => {
 
 // WAV upload
 wavUpload.addEventListener('change', () => {
-  decodeWavBtn.disabled = !wavUpload.files.length;
+  const file = wavUpload.files && wavUpload.files[0];
+  if (!file) {
+    audioUploadName.textContent = '';
+    uploadedAudio.style.display = 'none';
+    playUploadedBtn.disabled = true;
+    stopUploadedBtn.disabled = true;
+    decodeWavBtn.disabled = true;
+    return;
+  }
+  audioUploadName.textContent = file.name;
+  if (uploadedAudioUrl) {
+    try { URL.revokeObjectURL(uploadedAudioUrl); } catch (_) {}
+  }
+  uploadedAudioUrl = URL.createObjectURL(file);
+  uploadedAudio.src = uploadedAudioUrl;
+  uploadedAudio.style.display = 'block';
+  playUploadedBtn.disabled = false;
+  stopUploadedBtn.disabled = false;
+  decodeWavBtn.disabled = false;
+});
+
+// Uploaded audio playback
+playUploadedBtn.addEventListener('click', () => {
+  uploadedAudio.play().catch(() => {});
+});
+stopUploadedBtn.addEventListener('click', () => {
+  uploadedAudio.pause();
+  uploadedAudio.currentTime = 0;
+});
+
+// QR upload & decode
+qrUpload.addEventListener('change', async () => {
+  const file = qrUpload.files && qrUpload.files[0];
+  if (!file) return;
+
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.src = url;
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+  });
+  URL.revokeObjectURL(url);
+
+  const canvas = document.getElementById('qrUploadCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  ctx.drawImage(img, 0, 0);
+
+  // Try BarcodeDetector API (Chrome/Edge)
+  if ('BarcodeDetector' in window) {
+    try {
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      const barcodes = await detector.detect(img);
+      if (barcodes.length > 0) {
+        morseInput.value = barcodes[0].rawValue;
+        showToast('✅ QR code decoded');
+        return;
+      }
+    } catch (_) {}
+  }
+
+  // Fallback: try reading imageData with jsQR if available
+  if (typeof jsQR === 'function') {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, canvas.width, canvas.height);
+    if (code) {
+      morseInput.value = code.data;
+      showToast('✅ QR code decoded');
+      return;
+    }
+  }
+
+  showToast('❌ Could not read QR — paste base64 manually');
 });
 
 // Decode WAV
@@ -3316,6 +3490,7 @@ transmitBtn.addEventListener('click', async () => {
   
   transmitBtn.disabled = true;
   updateStatus("🔐 ENCRYPTING...");
+  playTurtleTx();
   
   try {
     const ciphertext = await encryptMessage(msg, pw, pep, signKey);
@@ -3344,11 +3519,13 @@ transmitBtn.addEventListener('click', async () => {
     
     updateStatus("🟢 READY");
     showToast("✅ Encryption complete");
+    stopTurtleTx(false);
     
   } catch (e) {
     output.innerHTML = `<span style="color:#ff6666">❌ Error: ${e.message}</span>`;
     updateStatus("🔴 ERROR", true);
     showToast("❌ Encryption failed");
+    stopTurtleTx(true);
   } finally {
     transmitBtn.disabled = false;
   }
@@ -3372,8 +3549,7 @@ copyBase64Btn.addEventListener('click', () => {
 // Download WAV
 downloadWavBtn.addEventListener('click', () => {
   if (!lastMorse) return;
-  const signal = parseInt(signalSlider.value);
-  const wav = generateWAV(lastMorse, signal);
+  const wav = generateWAV(lastMorse, 100);
   const url = URL.createObjectURL(wav);
   const a = document.createElement('a');
   a.href = url;
@@ -3383,9 +3559,9 @@ downloadWavBtn.addEventListener('click', () => {
   showToast("📥 WAV downloaded");
 });
 
-// Play/Stop
-playBtn.addEventListener('click', () => {
-  if (lastMorse) playMorse(lastMorse);
+// Play-Pause/Stop
+playPauseBtn.addEventListener('click', () => {
+  if (lastMorse) toggleMorsePlayback(lastMorse).catch(() => {});
 });
 
 stopBtn.addEventListener('click', stopPlayback);
@@ -3461,7 +3637,19 @@ clearBtn.addEventListener('click', () => {
   decryptPepper.value = '';
   senderPubKey.value = '';
   wavUpload.value = '';
+  qrUpload.value = '';
   decodeWavBtn.disabled = true;
+  playUploadedBtn.disabled = true;
+  stopUploadedBtn.disabled = true;
+  audioUploadName.textContent = '';
+  if (uploadedAudioUrl) {
+    try { URL.revokeObjectURL(uploadedAudioUrl); } catch (_) {}
+    uploadedAudioUrl = null;
+  }
+  uploadedAudio.pause();
+  uploadedAudio.removeAttribute('src');
+  uploadedAudio.load();
+  uploadedAudio.style.display = 'none';
   output.innerHTML = 'Ready. Enter a message and password to begin.';
   qrSection.style.display = 'none';
   actionButtons.style.display = 'none';
@@ -3469,8 +3657,75 @@ clearBtn.addEventListener('click', () => {
   lastCiphertext = null;
   lastMorse = null;
   stopPlayback();
+  stopTurtleTx(true);
   updateStatus("🟢 READY");
 });
+
+// ==================== TURTLE TX VIDEO ====================
+const turtleTxVid = document.getElementById('turtleTxVid');
+const txReplayBtn = document.getElementById('txReplayBtn');
+const txRow = document.getElementById('txRow');
+
+async function playTurtleTx() {
+  if (!turtleTxVid) return;
+  txReplayBtn.classList.remove('show');
+  turtleTxVid.muted = false;
+  turtleTxVid.loop = false;
+  turtleTxVid.playbackRate = 0.75;
+  try { turtleTxVid.currentTime = 0; } catch (_) {}
+  try {
+    const p = turtleTxVid.play();
+    if (p && typeof p.then === 'function') await p;
+  } catch (e) {
+    // Autoplay blocked — try muted
+    turtleTxVid.muted = true;
+    try {
+      turtleTxVid.load();
+      const p = turtleTxVid.play();
+      if (p && typeof p.then === 'function') await p;
+    } catch (_) {}
+  }
+  txRow.classList.add('tx-transmitting');
+}
+
+function stopTurtleTx(force) {
+  if (!turtleTxVid) return;
+  if (force) {
+    turtleTxVid.pause();
+    try { turtleTxVid.currentTime = 0; } catch (_) {}
+    txReplayBtn.classList.remove('show');
+    txRow.classList.remove('tx-transmitting');
+    return;
+  }
+  turtleTxVid.loop = false;
+  turtleTxVid.playbackRate = 1.0;
+  const onEnded = () => {
+    turtleTxVid.removeEventListener('ended', onEnded);
+    try { turtleTxVid.currentTime = 0; } catch (_) {}
+    txReplayBtn.classList.add('show');
+    txRow.classList.remove('tx-transmitting');
+  };
+  turtleTxVid.addEventListener('ended', onEnded, { once: true });
+  setTimeout(() => {
+    turtleTxVid.removeEventListener('ended', onEnded);
+    turtleTxVid.pause();
+    try { turtleTxVid.currentTime = 0; } catch (_) {}
+    txReplayBtn.classList.add('show');
+    txRow.classList.remove('tx-transmitting');
+  }, 30000);
+}
+
+if (txReplayBtn) {
+  txReplayBtn.addEventListener('click', () => playTurtleTx());
+}
+
+// Mute toggle for turtle video
+if (muteBtn && turtleTxVid) {
+  muteBtn.addEventListener('click', () => {
+    turtleTxVid.muted = !turtleTxVid.muted;
+    muteBtn.textContent = turtleTxVid.muted ? 'Mute: On' : 'Mute: Off';
+  });
+}
 
 // ==================== INIT ====================
 updateStatus("🟢 READY");
