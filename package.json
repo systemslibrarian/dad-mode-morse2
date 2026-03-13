@@ -1,0 +1,25 @@
+{
+  "name": "dad-mode-morse",
+  "version": "5.0.0",
+  "description": "Offline encrypted Morse communication — Argon2id + AES-256-GCM + Ed25519",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test_crypto.mjs",
+    "test:wav": "python3 test_decode.py",
+    "test:all": "node test_crypto.mjs && python3 test_decode.py",
+    "hash": "shasum -a 256 index.html"
+  },
+  "devDependencies": {
+    "hash-wasm": "^4.11.0"
+  },
+  "license": "MIT",
+  "author": "Paul Clark (systemslibrarian)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/systemslibrarian/dad-mode-morse"
+  },
+  "dependencies": {
+    "hash-wasm": "^4.12.0"
+  }
+}

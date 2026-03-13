@@ -1,0 +1,18 @@
+{
+  "name": "Dead Man's Morse",
+  "short_name": "DMM",
+  "description": "Offline encrypted Morse communication tool — Argon2id + AES-256-GCM + Ed25519",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00ff88",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230a0a0a' width='100' height='100' rx='20'/><text x='50' y='62' text-anchor='middle' font-size='40' fill='%2300ff88' font-family='monospace'>DMM</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
