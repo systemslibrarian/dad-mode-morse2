@@ -83,6 +83,34 @@ unreadable. The audio sounds like random beeps to anyone without the key.
 - Only `0-9 A-F` → treated as raw hex → bytes
 - Anything else → treated as Base64 → bytes
 
+**From a QR code image:**
+1. Switch to the **Decrypt** tab
+2. Under "Upload QR Code Image", select a screenshot or photo of a QR code
+3. The app reads the QR and fills in the Base64 payload automatically
+4. Enter password → click **Decrypt**
+
+---
+
+## QR Code — What It Does
+
+After you encrypt a message, the app generates a **QR code** on screen. This QR code contains the **Base64-encoded ciphertext** — the same encrypted data you'd get from "Copy Base64", just in a scannable image.
+
+**Why is this useful?**
+- You can take a **screenshot** of the QR code and text it, email it, or AirDrop it to someone
+- The recipient can **upload that image** into the Decrypt tab — no typing or pasting needed
+- QR codes work even when printed on paper — scan with a phone camera to grab the payload
+- Like the WAV file, the QR code is **safe to share publicly** — without the password, it's unreadable
+
+**How it works under the hood:**
+1. Your message is encrypted → raw bytes
+2. The bytes are encoded as Base64 text (compact, URL-safe)
+3. That Base64 string is turned into a QR code image
+4. On the receiving end, the QR is decoded back to Base64 → bytes → decrypted with your password
+
+**Limits:** QR codes can hold about 4,000 characters. Very long messages may exceed this — the app will tell you and you can use "Copy Base64" or "Download WAV" instead.
+
+You can also click **Download QR** to save the QR code as a PNG file.
+
 ---
 
 ## Cryptography — v5 Container
@@ -225,26 +253,64 @@ Heavily degraded (noisy) audio may introduce symbol errors.
 
 ## Run Locally
 
-### Option A: Open the file directly
+You don't need to install anything complicated. Pick the option that fits your comfort level.
 
-1. Clone or download the repo
-2. Double-click `index.html`
+### Option A: Just open the file (simplest)
 
-> Note: The service worker requires HTTPS or localhost to register. Opening via
-> `file://` works for basic use but won't enable offline caching or PWA install.
+1. Go to https://github.com/systemslibrarian/dad-morse2
+2. Click the green **Code** button → **Download ZIP**
+3. Unzip the folder anywhere on your computer
+4. Open the folder and double-click **index.html** — it opens in your browser
+5. That's it. You can encrypt and decrypt messages right away
 
-### Option B: Local dev server (recommended)
+> **What you'll miss:** The "Install as App" button and offline caching won't
+> work when opened this way, because browsers require `https://` or
+> `localhost` for those features. Everything else works fine.
 
-**Python:**
+### Option B: Run a local web server (recommended)
+
+This gives you the full experience — offline mode, "Add to Home Screen", and
+service worker caching. You only need **one** of the tools below.
+
+#### Using Python (built into macOS and most Linux; easy to install on Windows)
+
+1. Download and unzip the repo (same as Option A steps 1–3)
+2. Open a terminal / command prompt
+3. Navigate to the folder:
+   ```bash
+   cd ~/Downloads/dad-morse2-main   # adjust the path to where you unzipped it
+   ```
+4. Start the server:
+   ```bash
+   python3 -m http.server 8080
+   ```
+5. Open your browser and go to **http://localhost:8080**
+6. To stop the server, press **Ctrl+C** in the terminal
+
+> **Don't have Python?**
+> - **Windows:** Download from https://www.python.org/downloads/ — check "Add to PATH" during install
+> - **macOS:** It's pre-installed. Open Terminal and type `python3 --version` to confirm
+> - **Linux:** It's pre-installed on most distros. If not: `sudo apt install python3`
+
+#### Using Node.js
+
+1. Download and unzip the repo
+2. Open a terminal and navigate to the folder
+3. Run:
+   ```bash
+   npx serve .
+   ```
+4. Open **http://localhost:3000** in your browser
+
+> **Don't have Node.js?** Download from https://nodejs.org/ — the LTS version is fine.
+
+### Option C: Clone with Git (for developers)
+
 ```bash
+git clone https://github.com/systemslibrarian/dad-morse2.git
+cd dad-morse2
 python3 -m http.server 8080
 # open http://localhost:8080
-```
-
-**Node.js:**
-```bash
-npx serve .
-# open http://localhost:3000
 ```
 
 ---
