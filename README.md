@@ -22,7 +22,7 @@ Installable as a PWA. Works fully offline after first load.
 
 ## Live Demo
 
-✅ https://systemslibrarian.github.io/dad-morse2/
+✅ [https://systemslibrarian.github.io/dad-morse2/](https://systemslibrarian.github.io/dad-mode-morse2/)
 
 ---
 
