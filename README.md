@@ -165,7 +165,7 @@ Both paths encode the same ciphertext bytes. Hex is used for Morse because the M
 
 ## Offline / PWA Architecture
 
-Dead Man's Morse is a Progressive Web App with zero external dependencies at runtime.
+Dad's Morse is a Progressive Web App with zero external dependencies at runtime.
 
 | Component | Status |
 |---|---|

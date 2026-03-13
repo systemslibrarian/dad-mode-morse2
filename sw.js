@@ -1,4 +1,4 @@
-// Dead Man's Morse — Service Worker v1
+// Dad's Morse — Service Worker v1
 const CACHE_NAME = 'dmm-v5';
 const ASSETS = [
   './',

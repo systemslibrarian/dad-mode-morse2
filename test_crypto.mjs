@@ -1,5 +1,5 @@
 /**
- * Dead Man's Morse — v5 Container Test Suite
+ * Dad's Morse — v5 Container Test Suite
  *
  * Tests the DMM1 v5 cryptographic container format:
  *   Argon2id → HKDF-SHA256 → AES-256-GCM (header as AAD)
@@ -266,12 +266,12 @@ async function assertRejects(fn, msgContains) {
 // TESTS
 // ============================================================
 
-console.log("\n🔐 Dead Man's Morse v5 — Crypto Test Suite\n");
+console.log("\n🔐 Dad's Morse v5 — Crypto Test Suite\n");
 
 const PW = "test-password-14ch!";
 const PW2 = "wrong-password-here!";
 const PEPPER = "signal-key-pepper";
-const MSG = "Hello from Dead Man's Morse";
+const MSG = "Hello from Dad's Morse";
 
 // ── Container format ──
 

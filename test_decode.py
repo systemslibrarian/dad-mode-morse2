@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Dead Man's Morse — WAV Decode Test Suite
+Dad's Morse — WAV Decode Test Suite
 
 Synthesises WAV data using the same parameters as the JS app
 (44100 Hz, 700 Hz tone, 60 ms unit), then runs the decode algorithm
@@ -250,7 +250,7 @@ def roundtrip(morse_str, label=""):
 
 # ── Tests ──
 
-print("\n🔊 Dead Man's Morse v5 — WAV Decode Test Suite\n")
+print("\n🔊 Dad's Morse v5 — WAV Decode Test Suite\n")
 print("── Basic Decode ──")
 
 test(1, "Mixed dots/dashes: A B C D E F", lambda: (

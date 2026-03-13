@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#00ff88">
 <meta name="description" content="Offline encrypted Morse communication — Argon2id + AES-256-GCM + Ed25519">
 <link rel="manifest" href="manifest.json">
-<title>Dead Man's Morse</title>
+<title>Dad's Morse</title>
 <style>
 /* ==================== CORE RESET & TYPOGRAPHY ==================== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -152,7 +152,7 @@ input[type="checkbox"] { accent-color: var(--green); }
 
 <div class="app">
   <div class="header">
-    <h1>DEAD MAN'S MORSE</h1>
+    <h1>DAD'S MORSE</h1>
     <span class="status-badge" id="statusBadge"></span>
   </div>
 
@@ -3424,14 +3424,18 @@ decryptBtn.addEventListener('click', async () => {
     
     const plaintext = await decryptMessage(data, pw, pep, pubKey);
     
+    const msgDiv = document.createElement('div');
+    msgDiv.style.cssText = 'background:#1a1a1a; padding:15px; border-radius:4px; font-size:1.2em; white-space:pre-wrap';
+    msgDiv.textContent = plaintext;
+    
     output.innerHTML = `
       <div style="color:#88ffcc">✅ DECRYPTED</div><br>
       <strong>Message:</strong><br>
-      <div style="background:#1a1a1a; padding:15px; border-radius:4px; font-size:1.2em">${plaintext}</div>
     `;
+    output.appendChild(msgDiv);
     
     if (pubKey) {
-      output.innerHTML += `<br><span style="color:#88ffcc">✓ Signature verified</span>`;
+      output.insertAdjacentHTML('beforeend', `<br><span style="color:#88ffcc">✓ Signature verified</span>`);
     }
     
     updateStatus("🟢 READY");
