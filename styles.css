@@ -1,0 +1,180 @@
+/* ==================== CORE RESET & TYPOGRAPHY ==================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a0a; --surface: #111; --surface2: #1a1a1a;
+  --border: #222; --border2: #333;
+  --text: #ccc; --text2: #888; --text3: #555;
+  --green: #00ff88; --green2: #00cc6a; --green-dim: rgba(0,255,136,0.1);
+  --red: #ff4444; --amber: #ffaa00; --blue: #4488ff;
+  --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --radius: 6px;
+}
+html { font-size: 15px; }
+body {
+  font-family: var(--mono); background: var(--bg); color: var(--text);
+  min-height: 100dvh; line-height: 1.5; -webkit-font-smoothing: antialiased;
+}
+/* ==================== LAYOUT ==================== */
+.app { max-width: 640px; margin: 0 auto; padding: 16px; }
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 20px;
+}
+.header h1 { font-size: 1rem; color: var(--green); letter-spacing: 0.1em; font-weight: 600; }
+.status-badge { font-size: 0.75rem; }
+.offline-banner {
+  display: none; background: var(--amber); color: #000; text-align: center;
+  padding: 6px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em;
+}
+.offline-banner.show { display: block; }
+/* ==================== SECTIONS ==================== */
+.section { margin-bottom: 20px; }
+.section-label {
+  font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em;
+  color: var(--text3); margin-bottom: 8px; font-weight: 600;
+}
+/* ==================== INPUTS ==================== */
+textarea, input[type="text"], input[type="password"] {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); padding: 10px 12px; border-radius: var(--radius);
+  font-family: var(--mono); font-size: 0.85rem; outline: none;
+  transition: border-color 0.15s;
+}
+textarea:focus, input:focus { border-color: var(--green2); }
+textarea { resize: vertical; min-height: 80px; }
+input::placeholder, textarea::placeholder { color: var(--text3); }
+/* ==================== BUTTONS ==================== */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+  border: 1px solid var(--border2); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); font-family: var(--mono);
+  font-size: 0.8rem; cursor: pointer; transition: all 0.15s; user-select: none;
+}
+.btn:hover { border-color: var(--green2); color: var(--green); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.3; pointer-events: none; }
+.btn-primary { background: var(--green-dim); border-color: var(--green2); color: var(--green); }
+.btn-primary:hover { background: rgba(0,255,136,0.2); }
+.btn-danger { background: rgba(255,68,68,0.1); border-color: var(--red); color: var(--red); }
+.btn-danger:hover { background: rgba(255,68,68,0.2); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+/* ==================== TOGGLE / CHECKBOX ==================== */
+.toggle-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.toggle-row label { font-size: 0.8rem; color: var(--text2); cursor: pointer; }
+input[type="checkbox"] { accent-color: var(--green); }
+/* ==================== OUTPUT ==================== */
+.output-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px; font-size: 0.85rem; min-height: 60px; word-break: break-all;
+  line-height: 1.6;
+}
+.output-box .success { color: var(--green); }
+.output-box .error { color: var(--red); }
+.output-box .label { color: var(--text2); font-size: 0.75rem; }
+.output-box .data {
+  background: var(--surface2); padding: 8px; border-radius: 4px; margin: 6px 0;
+}
+/* ==================== STRENGTH METER ==================== */
+.strength-container { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.strength-track { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.strength-bar { height: 100%; width: 0; transition: width 0.2s, background 0.2s; border-radius: 2px; }
+.strength-0 { background: var(--red); }
+.strength-1 { background: var(--red); }
+.strength-2 { background: var(--amber); }
+.strength-3 { background: var(--green2); }
+.strength-4 { background: var(--green); }
+.strength-text { font-size: 0.65rem; color: var(--text3); min-width: 60px; }
+/* ==================== QR ==================== */
+.qr-section { display: none; text-align: center; margin: 12px 0; }
+.qr-section canvas { border: 4px solid #fff; border-radius: 4px; }
+/* ==================== PROGRESS ==================== */
+.progress { display: none; margin: 10px 0; }
+.progress-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0; background: var(--green); transition: width 0.3s; }
+.progress-label { font-size: 0.7rem; color: var(--text2); margin-top: 4px; }
+/* ==================== SIGNAL SLIDER ==================== */
+.slider-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.slider-row input[type="range"] { flex: 1; accent-color: var(--green); }
+.slider-row .slider-val { font-size: 0.7rem; color: var(--text2); min-width: 80px; }
+/* ==================== TOAST ==================== */
+.toast {
+  position: fixed; bottom: -60px; left: 50%; transform: translateX(-50%);
+  background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+  padding: 8px 20px; border-radius: var(--radius); font-family: var(--mono);
+  font-size: 0.8rem; transition: bottom 0.3s; z-index: 9999; white-space: nowrap;
+}
+.toast.show { bottom: 24px; }
+/* ==================== TABS ==================== */
+.tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tab {
+  flex: 1; text-align: center; padding: 10px; font-size: 0.75rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3);
+  cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s;
+}
+.tab:hover { color: var(--text2); }
+.tab.active { color: var(--green); border-bottom-color: var(--green); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+/* ==================== SIGNING ==================== */
+.signing-section { display: none; }
+.key-mode-section { display: none; margin-bottom: 12px; }
+.key-mode-info {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 12px; margin-top: 8px;
+  font-size: 0.7rem; color: var(--text2); line-height: 1.6;
+}
+.key-mode-info.warning {
+  border-color: var(--amber); color: var(--amber);
+}
+.fingerprint {
+  display: none; background: var(--green-dim); border: 1px solid var(--green2);
+  border-radius: var(--radius); padding: 8px 12px; margin-top: 8px;
+  font-size: 0.75rem; color: var(--green);
+}
+/* ==================== CRYPTO INFO ==================== */
+.crypto-info {
+  font-size: 0.65rem; color: var(--text3); border-top: 1px solid var(--border);
+  padding-top: 12px; margin-top: 24px; line-height: 1.8;
+}
+.crypto-info strong { color: var(--text2); }
+/* ==================== TURTLE HEADER ==================== */
+#turtleHeaderImg {
+  width: 200px; max-width: 100%; height: auto; border-radius: 12px;
+  background: #000; border: 1px solid rgba(0,255,136,0.25);
+  box-shadow: 0 0 14px rgba(0,255,136,0.1); display: block; margin: 0 auto 12px;
+}
+/* ==================== TURTLE TX VIDEO ==================== */
+.tx-media { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+#turtleTxVid {
+  width: 160px; max-width: 40%; height: auto; border-radius: 10px;
+  background: #000; border: 1px solid rgba(0,255,136,0.3);
+  box-shadow: 0 0 12px rgba(0,255,136,0.06);
+}
+.tx-transmitting #turtleTxVid {
+  outline: 2px solid rgba(0,255,136,0.5);
+  box-shadow: 0 0 16px rgba(0,255,136,0.18);
+}
+#txReplayBtn { display: none; }
+#txReplayBtn.show { display: inline-flex; }
+/* ==================== PAUSE / MUTE BUTTONS ==================== */
+.btn.paused { background: var(--amber); color: #000; border-color: var(--amber); }
+.btn.paused:hover { background: #cc8800; }
+#muteBtn { font-size: 0.7rem; }
+/* ==================== UPLOADED AUDIO ==================== */
+.audio-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.audio-controls .file-chip { font-size: 0.7rem; color: var(--text2); }
+#uploadedAudio { width: 100%; margin-top: 8px; display: none; border-radius: var(--radius); }
+/* ==================== QR UPLOAD ==================== */
+.qr-upload-section { margin-top: 8px; }
+.qr-upload-section canvas { display: none; }
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 400px) {
+  html { font-size: 13px; }
+  .app { padding: 10px; }
+  .btn-row { flex-direction: column; }
+  .btn { width: 100%; justify-content: center; }
+  #turtleHeaderImg { width: 100%; max-width: 280px; }
+  .tx-media { flex-direction: column; }
+  #turtleTxVid { width: 100%; max-width: 200px; }
+}
