@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#00ff88">
 <meta name="description" content="Offline encrypted Morse communication — Argon2id + AES-256-GCM + Ed25519">
 <link rel="manifest" href="manifest.json">
@@ -41,6 +41,7 @@ body {
 /* ==================== SECTIONS ==================== */
 .section { margin-bottom: 20px; }
 .section-label {
+  display: block;
   font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em;
   color: var(--text3); margin-bottom: 8px; font-weight: 600;
 }
@@ -52,11 +53,16 @@ textarea, input[type="text"], input[type="password"] {
   transition: border-color 0.15s;
 }
 textarea:focus, input:focus { border-color: var(--green2); }
+textarea:focus-visible, input:focus-visible, select:focus-visible,
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid var(--green); outline-offset: 2px;
+}
 textarea { resize: vertical; min-height: 80px; }
 input::placeholder, textarea::placeholder { color: var(--text3); }
 /* ==================== BUTTONS ==================== */
 .btn {
-  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 8px 16px;
   border: 1px solid var(--border2); border-radius: var(--radius);
   background: var(--surface); color: var(--text); font-family: var(--mono);
   font-size: 0.8rem; cursor: pointer; transition: all 0.15s; user-select: none;
@@ -118,7 +124,9 @@ input[type="checkbox"] { accent-color: var(--green); }
 .tab {
   flex: 1; text-align: center; padding: 10px; font-size: 0.75rem;
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3);
-  cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s;
+  cursor: pointer; transition: all 0.15s;
+  min-height: 44px; font-family: var(--mono); font-weight: inherit;
+  background: none; border: 0; border-bottom: 2px solid transparent;
 }
 .tab:hover { color: var(--text2); }
 .tab.active { color: var(--green); border-bottom-color: var(--green); }
@@ -167,6 +175,15 @@ input[type="checkbox"] { accent-color: var(--green); }
 /* ==================== QR UPLOAD ==================== */
 .qr-upload-section { margin-top: 8px; }
 .qr-upload-section canvas { display: none; }
+/* ==================== REDUCED MOTION ==================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 400px) {
   html { font-size: 13px; }
@@ -180,11 +197,6 @@ input[type="checkbox"] { accent-color: var(--green); }
 </style>
 </head>
 <body>
-<!-- BEGIN crypto-lab shared header — managed; edit shared-header.html + re-run reapply-header.py
-     Identical on every lab. Self-contained styles. Accents use each demo's own
-     --accent CSS variable (teal #35d6bb fallback). The ONLY per-repo value is the
-     repo name (dad-mode-morse2) in the GitHub link.
-     Source of truth: github.com/systemslibrarian/crypto-lab/shared-header.html -->
 <style>
   .cl-topbar{
     /* The bar is always dark (#0b1512) regardless of page theme, so header
@@ -296,7 +308,6 @@ input[type="checkbox"] { accent-color: var(--green); }
     else dedupeBanner();
   })();
 </script>
-<!-- END crypto-lab shared header -->
 <div class="offline-banner" id="offlineBanner">OFFLINE — all crypto runs locally</div>
 
 <div class="app">
@@ -306,21 +317,22 @@ input[type="checkbox"] { accent-color: var(--green); }
     <span class="status-badge" id="statusBadge"></span>
   </div>
 
+  <main id="main-content">
   <!-- Tabs -->
-  <div class="tabs">
-    <div class="tab active" data-tab="encrypt">Encrypt</div>
-    <div class="tab" data-tab="decrypt">Decrypt</div>
+  <div class="tabs" role="tablist" aria-label="Encrypt or decrypt">
+    <button type="button" class="tab active" data-tab="encrypt" role="tab" id="tabbtn-encrypt" aria-controls="tab-encrypt" aria-selected="true">Encrypt</button>
+    <button type="button" class="tab" data-tab="decrypt" role="tab" id="tabbtn-decrypt" aria-controls="tab-decrypt" aria-selected="false">Decrypt</button>
   </div>
 
   <!-- ==================== ENCRYPT TAB ==================== -->
-  <div class="tab-panel active" id="tab-encrypt">
+  <div class="tab-panel active" id="tab-encrypt" role="tabpanel" aria-labelledby="tabbtn-encrypt" tabindex="0">
     <div class="section">
-      <div class="section-label">Message</div>
+      <label class="section-label" for="message">Message</label>
       <textarea id="message" placeholder="Enter your message..." rows="3"></textarea>
     </div>
 
     <div class="section">
-      <div class="section-label">Password (14+ characters)</div>
+      <label class="section-label" for="password">Password (14+ characters)</label>
       <input type="password" id="password" placeholder="Strong passphrase...">
       <div class="strength-container">
         <div class="strength-track"><div class="strength-bar" id="strengthBar"></div></div>
@@ -329,7 +341,7 @@ input[type="checkbox"] { accent-color: var(--green); }
     </div>
 
     <div class="section">
-      <div class="section-label">Pepper / Signal Key (optional)</div>
+      <label class="section-label" for="pepper">Pepper / Signal Key (optional)</label>
       <input type="password" id="pepper" placeholder="Optional extra secret...">
     </div>
 
@@ -345,7 +357,7 @@ input[type="checkbox"] { accent-color: var(--green); }
 
     <div class="signing-section" id="signingSection">
       <div class="section">
-        <div class="section-label">Private Key (base64)</div>
+        <label class="section-label" for="privKey">Private Key (base64)</label>
         <input type="text" id="privKey" placeholder="Paste or generate...">
         <div class="btn-row">
           <button class="btn" id="generateBtn">Generate Keypair</button>
@@ -355,7 +367,7 @@ input[type="checkbox"] { accent-color: var(--green); }
     </div>
 
     <div class="section">
-      <div class="section-label">Signal Quality</div>
+      <label class="section-label" for="signalSlider">Signal Quality</label>
       <div class="slider-row">
         <input type="range" id="signalSlider" min="5" max="100" value="100">
         <span class="slider-val" id="signalValue">100% crystal</span>
@@ -377,14 +389,14 @@ input[type="checkbox"] { accent-color: var(--green); }
   </div>
 
   <!-- ==================== DECRYPT TAB ==================== -->
-  <div class="tab-panel" id="tab-decrypt">
+  <div class="tab-panel" id="tab-decrypt" role="tabpanel" aria-labelledby="tabbtn-decrypt" tabindex="0">
     <div class="section">
-      <div class="section-label">Morse / Base64 Input</div>
+      <label class="section-label" for="morseInput">Morse / Base64 Input</label>
       <textarea id="morseInput" placeholder="Paste morse code or base64..." rows="3"></textarea>
     </div>
 
     <div class="section">
-      <div class="section-label">Upload QR Code Image</div>
+      <label class="section-label" for="qrUpload">Upload QR Code Image</label>
       <input type="file" id="qrUpload" accept="image/*" style="font-size:0.8rem; color:var(--text2)">
       <div class="qr-upload-section">
         <canvas id="qrUploadCanvas"></canvas>
@@ -392,7 +404,7 @@ input[type="checkbox"] { accent-color: var(--green); }
     </div>
 
     <div class="section">
-      <div class="section-label">Upload WAV</div>
+      <label class="section-label" for="wavUpload">Upload WAV</label>
       <input type="file" id="wavUpload" accept=".wav,audio/wav,audio/*" style="font-size:0.8rem; color:var(--text2)">
       <div class="audio-controls">
         <button class="btn" id="playUploadedBtn" disabled>Play</button>
@@ -408,17 +420,17 @@ input[type="checkbox"] { accent-color: var(--green); }
     </div>
 
     <div class="section">
-      <div class="section-label">Password</div>
+      <label class="section-label" for="decryptPw">Password</label>
       <input type="password" id="decryptPw" placeholder="Password...">
     </div>
 
     <div class="section">
-      <div class="section-label">Pepper / Signal Key (if used)</div>
+      <label class="section-label" for="decryptPepper">Pepper / Signal Key (if used)</label>
       <input type="password" id="decryptPepper" placeholder="Optional pepper...">
     </div>
 
     <div class="section">
-      <div class="section-label">Sender Public Key (for signed messages)</div>
+      <label class="section-label" for="senderPubKey">Sender Public Key (for signed messages)</label>
       <input type="text" id="senderPubKey" placeholder="Base64 public key...">
     </div>
 
@@ -447,13 +459,15 @@ input[type="checkbox"] { accent-color: var(--green); }
     <button class="btn" id="stopBtn" disabled>Stop</button>
   </div>
 
+  </main>
+
   <!-- ==================== CRYPTO INFO ==================== -->
-  <div class="crypto-info">
+  <footer class="crypto-info">
     <strong>v5 Container</strong> — Argon2id (64MB, t=4, p=4) → HKDF-SHA256 → AES-256-GCM with authenticated header.<br>
     Optional Ed25519 signatures verified before decryption. No server. No CDN. No network calls.<br>
     All cryptographic operations use the browser's native WebCrypto API.<br>
     Old v4 containers are not supported.
-  </div>
+  </footer>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -2770,9 +2784,13 @@ var qrcode = function() {
 // ==================== TAB SWITCHING ====================
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+    });
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
+    tab.setAttribute('aria-selected', 'true');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
   });
 });
@@ -3248,6 +3266,8 @@ function generateQR(text) {
   const margin = 16; // quiet zone
 
   const canvas = document.createElement('canvas');
+  canvas.setAttribute('role', 'img');
+  canvas.setAttribute('aria-label', 'QR code of the encoded message');
   canvas.width = size + margin * 2;
   canvas.height = size + margin * 2;
   const ctx = canvas.getContext('2d');
